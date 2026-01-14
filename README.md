@@ -7,38 +7,9 @@ A Next.js application for analyzing market dynamics with Z-score calculations an
 ### Prerequisites
 - Node.js 18+ 
 - Python 3.8+
-- npm or yarn
+- npm
 
 ### Installation
-
-**Option 1: Zero-Install Setup (Windows - No Python Required!)**
-
-Automatically download and set up portable Python (no system installation needed):
-```powershell
-# Windows PowerShell (run as Administrator if needed):
-.\scripts\install-python-portable.ps1
-npm install
-npm run dev
-```
-
-This will:
-- Download Python Embedded (~25MB) to `python-portable/` in the project directory
-- Set up pip and install required packages
-- The app will automatically use this Python - no configuration needed!
-
-**Note:** The `python-portable/` directory will be created in your project. You can add it to `.gitignore` if you don't want to commit it.
-
-**Option 2: Quick Setup with System Python (Recommended):**
-
-Run the setup script for your platform:
-```bash
-# Windows PowerShell:
-.\setup.ps1
-
-# Mac/Linux:
-chmod +x setup.sh
-./setup.sh
-```
 
 **Manual Setup:**
 
@@ -63,19 +34,6 @@ source venv/bin/activate
 # Install Python dependencies
 pip install -r requirements.txt
 ```
-
-**Option B: Install to system Python**
-```bash
-pip install -r requirements.txt
-```
-
-**Note:** The application will automatically detect Python in this order:
-1. Portable Python in `python-portable/` (if set up via Option 1)
-2. Virtual environment in `venv/` folder (recommended for portability)
-3. System Python commands (`python`, `python3`, or `py`)
-4. The app verifies that `yfinance` is installed before using any Python
-
-If you need to use a specific Python installation, you can optionally set the `PYTHON_PATH` environment variable.
 
 ### Running the Application
 
