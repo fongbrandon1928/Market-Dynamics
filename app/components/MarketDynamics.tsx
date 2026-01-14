@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from 'recharts'
 
 // Custom tooltip component
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -405,7 +405,7 @@ export default function MarketDynamics() {
 
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData}>
+            <AreaChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -417,22 +417,26 @@ export default function MarketDynamics() {
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
+              <Brush dataKey="date" height={20} stroke="#1E3A8A" />
               {Object.keys(chartData[0] || {})
                 .filter(key => key !== 'date')
                 .map((ticker, index) => {
                   const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff', '#00ffff', '#ffff00']
                   return (
-                    <Line
+                    <Area
                       key={ticker}
                       type="monotone"
                       dataKey={ticker}
                       stroke={colors[index % colors.length]}
-                      strokeWidth={2}
+                      strokeWidth={1.5}
+                      fill={colors[index % colors.length]}
+                      fillOpacity={0.12}
                       dot={false}
+                      isAnimationActive={false}
                     />
                   )
                 })}
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
           <div style={{
