@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
 import sys
+import os
 import json
 import yfinance as yf
 import pandas as pd
 import numpy as np
 from datetime import datetime
+
+# Ensure local modules can be imported when running as a script
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+from metrics import (
+    compute_zscore,
+    compute_modified_zscore,
+    compute_iqr_score,
+    compute_minmax_score,
+)
 
 def calculate_zscore(tickers, normalization_ticker, start_date, end_date, timescale='1M', metric='zscore'):
     """Calculate scores for tickers normalized against a reference ticker"""
@@ -59,35 +72,15 @@ def calculate_zscore(tickers, normalization_ticker, start_date, end_date, timesc
             
             # Calculate rolling statistics using the selected timescale window
             window = min(requested_window, len(relative_returns))
-            rolling_mean = relative_returns.rolling(window=window, min_periods=1).mean()
-            rolling_std = relative_returns.rolling(window=window, min_periods=1).std()
-            rolling_median = relative_returns.rolling(window=window, min_periods=1).median()
-
-            # Rolling MAD and IQR for robust methods
-            rolling_mad = relative_returns.rolling(window=window, min_periods=1).apply(
-                lambda x: np.median(np.abs(x - np.median(x))), raw=True
-            )
-            rolling_q1 = relative_returns.rolling(window=window, min_periods=1).quantile(0.25)
-            rolling_q3 = relative_returns.rolling(window=window, min_periods=1).quantile(0.75)
-            rolling_iqr = (rolling_q3 - rolling_q1).replace(0, np.nan)
-
-            # Rolling min/max for min-max scaling
-            rolling_min = relative_returns.rolling(window=window, min_periods=1).min()
-            rolling_max = relative_returns.rolling(window=window, min_periods=1).max()
-            rolling_range = (rolling_max - rolling_min).replace(0, np.nan)
 
             if metric_key == 'modified_zscore':
-                # Modified Z-score: (x - median) / (1.4826 * MAD)
-                score = (relative_returns - rolling_median) / (1.4826 * rolling_mad.replace(0, np.nan))
+                score = compute_modified_zscore(relative_returns, window)
             elif metric_key == 'iqr':
-                # IQR score: (x - median) / IQR
-                score = (relative_returns - rolling_median) / rolling_iqr
+                score = compute_iqr_score(relative_returns, window)
             elif metric_key == 'minmax':
-                # Min-Max scaling: (x - min) / (max - min)
-                score = (relative_returns - rolling_min) / rolling_range
+                score = compute_minmax_score(relative_returns, window)
             else:
-                # Standard Z-score: (x - mean) / std
-                score = (relative_returns - rolling_mean) / rolling_std.replace(0, np.nan)
+                score = compute_zscore(relative_returns, window)
 
             score = score.replace([np.inf, -np.inf], np.nan).fillna(0)
             zscores[ticker] = score.tolist()
