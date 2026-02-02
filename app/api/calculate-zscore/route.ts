@@ -86,7 +86,7 @@ function getPythonPath(): string {
   return 'python'
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json()
     const { tickers, normalizationTicker, startDate, endDate, timescale, metric } = body
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     writeFileSync(tempFile, JSON.stringify(inputData))
 
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       const pythonScript = join(process.cwd(), 'scripts', 'calculate_zscore.py')
       const pythonPath = getPythonPath()
       console.log(`Using Python: ${pythonPath}`)
@@ -167,10 +167,10 @@ export async function POST(request: NextRequest) {
           
           resolve(
             NextResponse.json(
-              { 
-                error: errorMessage, 
+              {
+                error: errorMessage,
                 details: errorOutput,
-                help: helpfulMessage || undefined
+                help: helpfulMessage || undefined,
               },
               { status: 500 }
             )
