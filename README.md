@@ -11,8 +11,6 @@ A Next.js application for analyzing market dynamics with Z-score calculations an
 
 ### Installation
 
-**Manual Setup:**
-
 1. Install Node.js dependencies:
 ```bash
 npm install
@@ -32,6 +30,23 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # Install Python dependencies
+pip install -r requirements.txt
+```
+
+## Hosting / Deployment
+
+1. Build the Next.js app:
+```bash
+npm run build
+```
+
+2. Start the production server:
+```bash
+npm start
+```
+
+3. Ensure the host has Python available on PATH and install Python deps:
+```bash
 pip install -r requirements.txt
 ```
 

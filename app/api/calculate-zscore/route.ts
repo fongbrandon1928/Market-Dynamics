@@ -89,7 +89,7 @@ function getPythonPath(): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tickers, normalizationTicker, startDate, endDate } = body
+    const { tickers, normalizationTicker, startDate, endDate, timescale, metric } = body
 
     if (!tickers || !normalizationTicker || !startDate || !endDate) {
       return NextResponse.json(
@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
       normalizationTicker,
       startDate,
       endDate,
+      timescale,
+      metric,
     }
 
     writeFileSync(tempFile, JSON.stringify(inputData))

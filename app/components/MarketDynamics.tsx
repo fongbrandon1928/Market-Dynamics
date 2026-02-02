@@ -52,6 +52,15 @@ const ratingScore = (zscore: number): number => {
 
 const ETF_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLP', 'XLU', 'XLV', 'XLI', 'SMH']
 
+type MetricOption = 'zscore' | 'modified_zscore' | 'iqr' | 'minmax'
+
+const METRIC_OPTIONS: { label: string; value: MetricOption }[] = [
+  { label: 'Z-score', value: 'zscore' },
+  { label: 'Modified Z-score (MAD)', value: 'modified_zscore' },
+  { label: 'IQR Score', value: 'iqr' },
+  { label: 'Min-Max Scaling', value: 'minmax' },
+]
+
 // ETF holdings mapping (simplified - in production, fetch from yfinance)
 const ETF_HOLDINGS: { [key: string]: string[] } = {
   XLF: ['BRK-B', 'JPM', 'BAC', 'C', 'WFC', 'GS', 'MS', 'BLK', 'CME', 'V', 'MA'],
@@ -82,6 +91,7 @@ export default function MarketDynamics() {
   const [normalizationTicker, setNormalizationTicker] = useState<string>('')
   const [selectedETF, setSelectedETF] = useState<string>('')
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
+  const [metric, setMetric] = useState<MetricOption>('zscore')
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
 
@@ -141,14 +151,18 @@ export default function MarketDynamics() {
           normalizationTicker,
           startDate,
           endDate,
+          timescale: '2Y',
+          metric,
         }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to calculate Z-scores')
-      }
-
       const data = await response.json()
+
+      if (!response.ok) {
+        const errorMessage = data?.error || 'Failed to calculate Z-scores'
+        const helpMessage = data?.help ? `\n${data.help}` : ''
+        throw new Error(`${errorMessage}${helpMessage}`)
+      }
       
       // Transform data for chart
       const chartDataPoints: ChartDataPoint[] = []
@@ -383,7 +397,26 @@ export default function MarketDynamics() {
         position: 'relative',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Z-score Chart</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Score Chart</h2>
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as MetricOption)}
+              style={{
+                padding: '6px 10px',
+                border: '1px solid #ccc',
+                borderRadius: '8px',
+                fontSize: '12px',
+                backgroundColor: 'white',
+              }}
+            >
+              {METRIC_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={handleDownloadChartData}
             disabled={chartData.length === 0}
