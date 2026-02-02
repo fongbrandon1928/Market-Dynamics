@@ -5,8 +5,7 @@ A Next.js application for analyzing market dynamics with Z-score calculations an
 ## Setup
 
 ### Prerequisites
-- Node.js 18+ 
-- Python 3.8+
+- Node.js 18+
 - npm
 
 ### Installation
@@ -14,23 +13,6 @@ A Next.js application for analyzing market dynamics with Z-score calculations an
 1. Install Node.js dependencies:
 ```bash
 npm install
-```
-
-2. Set up Python environment (recommended - use a virtual environment):
-
-**Option A: Create a virtual environment in the project (Recommended)**
-```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate it
-# On Windows:
-venv\Scripts\activate
-# On Mac/Linux:
-source venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
 ```
 
 ## Hosting / Deployment
@@ -43,11 +25,6 @@ npm run build
 2. Start the production server:
 ```bash
 npm start
-```
-
-3. Ensure the host has Python available on PATH and install Python deps:
-```bash
-pip install -r requirements.txt
 ```
 
 ### Running the Application
@@ -79,7 +56,7 @@ npm run dev
 
 ## Notes
 
-- The application uses Python's `yfinance` library for fetching stock data (more reliable than JavaScript alternatives)
+- The application uses the `yahoo-finance2` package for fetching stock data on the server
 - ETF holdings use predefined mappings with fallback support
 - Z-scores are calculated relative to the normalization ticker using rolling statistics (30-day window)
 - Rating scores are calculated as: `Rating Score = 100 * CumProb(Z-score)`

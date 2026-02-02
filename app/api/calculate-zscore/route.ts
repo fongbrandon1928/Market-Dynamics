@@ -1,89 +1,175 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { spawn, execSync } from 'child_process'
-import { join } from 'path'
-import { writeFileSync, unlinkSync, existsSync } from 'fs'
-import { tmpdir, homedir } from 'os'
-import { randomUUID } from 'crypto'
+import YahooFinance from 'yahoo-finance2'
 
-// Python path finder - automatically detects Python with yfinance installed
-function getPythonPath(): string {
-  // Try environment variable first (optional override)
-  if (process.env.PYTHON_PATH) {
-    return process.env.PYTHON_PATH
+export const runtime = 'nodejs'
+const yahooFinance = new YahooFinance()
+
+const WINDOW_BY_TIMESCALE: Record<string, number> = {
+  '1M': 21,
+  '6M': 126,
+  '1Y': 252,
+  '2Y': 504,
+}
+
+type PricePoint = {
+  date: string
+  close: number
+}
+
+type ReturnPoint = {
+  date: string
+  value: number
+}
+
+const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
+
+const computeReturns = (series: PricePoint[]): ReturnPoint[] => {
+  if (series.length < 2) {
+    return []
   }
-  
-  // Check project-local Python installations first
-  const isWindows = process.platform === 'win32'
-  const localPythonPaths = [
-    // Portable Python (if set up via install script)
-    join(process.cwd(), 'python-portable', 'python.exe'),
-    // Project-local venv (recommended for portability)
-    join(process.cwd(), 'venv', isWindows ? 'Scripts' : 'bin', isWindows ? 'python.exe' : 'python'),
-  ]
-  
-  // Check portable Python and venv first
-  for (const pythonPath of localPythonPaths) {
-    if (existsSync(pythonPath)) {
-      try {
-        execSync(`"${pythonPath}" -c "import yfinance"`, {
-          stdio: 'ignore',
-          timeout: 2000,
-          shell: true as any
-        })
-        return pythonPath // Found Python with yfinance!
-      } catch {
-        // This Python doesn't have yfinance, continue
-        continue
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date))
+  const returns: ReturnPoint[] = []
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1].close
+    const curr = sorted[i].close
+    if (!Number.isFinite(prev) || !Number.isFinite(curr)) {
+      continue
+    }
+    if (prev === 0) {
+      continue
+    }
+    returns.push({
+      date: sorted[i].date,
+      value: curr / prev - 1,
+    })
+  }
+  return returns
+}
+
+const mean = (values: number[]): number => values.reduce((sum, v) => sum + v, 0) / values.length
+
+const std = (values: number[], meanValue: number): number => {
+  if (values.length <= 1) {
+    return Number.NaN
+  }
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - meanValue, 2), 0) / (values.length - 1)
+  return Math.sqrt(variance)
+}
+
+const median = (values: number[]): number => {
+  if (values.length === 0) {
+    return Number.NaN
+  }
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2
+  }
+  return sorted[mid]
+}
+
+const quantile = (values: number[], q: number): number => {
+  if (values.length === 0) {
+    return Number.NaN
+  }
+  const sorted = [...values].sort((a, b) => a - b)
+  const pos = (sorted.length - 1) * q
+  const lower = Math.floor(pos)
+  const upper = Math.ceil(pos)
+  if (lower === upper) {
+    return sorted[lower]
+  }
+  const weight = pos - lower
+  return sorted[lower] * (1 - weight) + sorted[upper] * weight
+}
+
+const computeRollingStats = (values: number[], window: number) => {
+  const rollingMean: number[] = []
+  const rollingStd: number[] = []
+  const rollingMedian: number[] = []
+  const rollingMad: number[] = []
+  const rollingIqr: number[] = []
+  const rollingMin: number[] = []
+  const rollingMax: number[] = []
+  const rollingRange: number[] = []
+
+  for (let i = 0; i < values.length; i += 1) {
+    const start = Math.max(0, i - window + 1)
+    const slice = values.slice(start, i + 1)
+
+    const sliceMean = mean(slice)
+    const sliceMedian = median(slice)
+    const sliceStd = std(slice, sliceMean)
+    const absDeviations = slice.map((v) => Math.abs(v - sliceMedian))
+    const sliceMad = median(absDeviations)
+    const sliceQ1 = quantile(slice, 0.25)
+    const sliceQ3 = quantile(slice, 0.75)
+    const sliceIqr = sliceQ3 - sliceQ1
+    const sliceMin = Math.min(...slice)
+    const sliceMax = Math.max(...slice)
+    const sliceRange = sliceMax - sliceMin
+
+    rollingMean.push(sliceMean)
+    rollingStd.push(sliceStd)
+    rollingMedian.push(sliceMedian)
+    rollingMad.push(sliceMad)
+    rollingIqr.push(sliceIqr === 0 ? Number.NaN : sliceIqr)
+    rollingMin.push(sliceMin)
+    rollingMax.push(sliceMax)
+    rollingRange.push(sliceRange === 0 ? Number.NaN : sliceRange)
+  }
+
+  return {
+    rollingMean,
+    rollingStd,
+    rollingMedian,
+    rollingMad,
+    rollingIqr,
+    rollingMin,
+    rollingMax,
+    rollingRange,
+  }
+}
+
+const sanitizeScore = (value: number): number => (Number.isFinite(value) ? value : 0)
+
+const computeScore = (values: number[], window: number, metric: string): number[] => {
+  const stats = computeRollingStats(values, window)
+  return values.map((value, index) => {
+    switch (metric) {
+      case 'modified_zscore': {
+        const denom = 1.4826 * stats.rollingMad[index]
+        return sanitizeScore((value - stats.rollingMedian[index]) / denom)
+      }
+      case 'iqr': {
+        return sanitizeScore((value - stats.rollingMedian[index]) / stats.rollingIqr[index])
+      }
+      case 'minmax': {
+        return sanitizeScore((value - stats.rollingMin[index]) / stats.rollingRange[index])
+      }
+      case 'zscore':
+      default: {
+        return sanitizeScore((value - stats.rollingMean[index]) / stats.rollingStd[index])
       }
     }
+  })
+}
+
+const fetchHistorical = async (ticker: string, startDate: Date, endDate: Date): Promise<PricePoint[]> => {
+  const rows = await yahooFinance.historical(ticker, {
+    period1: startDate,
+    period2: endDate,
+    interval: '1d',
+  })
+  if (!rows || rows.length === 0) {
+    return []
   }
-  
-  // Try common Python commands in order of preference
-  const pythonCommands = isWindows 
-    ? ['python', 'py', 'python3'] 
-    : ['python3', 'python']
-  
-  const systemPythonPaths: string[] = []
-  
-  // First, collect all available Python executables
-  for (const cmd of pythonCommands) {
-    try {
-      // Check if command exists and can run
-      execSync(`"${cmd}" --version`, { 
-        stdio: 'ignore',
-        timeout: 2000,
-        shell: true as any
-      })
-      systemPythonPaths.push(cmd)
-    } catch {
-      // Command not found, skip
-      continue
-    }
-  }
-  
-  // Try to find one with yfinance installed
-  for (const cmd of systemPythonPaths) {
-    try {
-      execSync(`"${cmd}" -c "import yfinance"`, {
-        stdio: 'ignore',
-        timeout: 2000,
-        shell: true as any
-      })
-      return cmd // Found Python with yfinance!
-    } catch {
-      // This Python doesn't have yfinance, try next
-      continue
-    }
-  }
-  
-  // If no Python has yfinance, return the first available one
-  // The error message will be more helpful
-  if (systemPythonPaths.length > 0) {
-    return systemPythonPaths[0]
-  }
-  
-  // Fallback to 'python' - will show error if not found
-  return 'python'
+  return rows
+    .filter((row) => row.date && typeof row.close === 'number')
+    .map((row) => ({
+      date: formatDate(row.date),
+      close: row.close as number,
+    }))
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -98,110 +184,91 @@ export async function POST(request: NextRequest): Promise<Response> {
       )
     }
 
-    // Create a temporary file to pass data to Python script
-    const tempFile = join(tmpdir(), `zscore-${randomUUID()}.json`)
-    const inputData = {
-      tickers,
-      normalizationTicker,
-      startDate,
-      endDate,
-      timescale,
-      metric,
+    const requestedStart = new Date(startDate)
+    const requestedEnd = new Date(endDate)
+    if (Number.isNaN(requestedStart.getTime()) || Number.isNaN(requestedEnd.getTime())) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
     }
 
-    writeFileSync(tempFile, JSON.stringify(inputData))
+    const normalizedTickers = Array.from(
+      new Set(
+        [
+          ...(Array.isArray(tickers) ? tickers : []),
+          normalizationTicker,
+        ]
+          .map((ticker: string) => String(ticker).trim())
+          .filter((ticker: string) => ticker.length > 0)
+      )
+    )
 
-    return new Promise<Response>((resolve) => {
-      const pythonScript = join(process.cwd(), 'scripts', 'calculate_zscore.py')
-      const pythonPath = getPythonPath()
-      console.log(`Using Python: ${pythonPath}`)
-      const python = spawn(pythonPath, [pythonScript, tempFile])
+    if (normalizedTickers.length === 0) {
+      return NextResponse.json({ error: 'No tickers provided' }, { status: 400 })
+    }
 
-      let output = ''
-      let errorOutput = ''
+    const metricKey = String(metric || 'zscore').toLowerCase()
+    const requestedWindow = WINDOW_BY_TIMESCALE[String(timescale || '1M').toUpperCase()] || 21
 
-      python.stdout.on('data', (data) => {
-        output += data.toString()
-      })
+    const historyResults = await Promise.all(
+      normalizedTickers.map(async (ticker: string) => ({
+        ticker,
+        data: await fetchHistorical(ticker, requestedStart, requestedEnd),
+      }))
+    )
 
-      python.stderr.on('data', (data) => {
-        errorOutput += data.toString()
-      })
+    const historyByTicker = new Map<string, PricePoint[]>()
+    for (const result of historyResults) {
+      historyByTicker.set(result.ticker, result.data)
+    }
 
-      python.on('close', (code) => {
-        // Clean up temp file
-        try {
-          unlinkSync(tempFile)
-        } catch (err) {
-          console.error('Failed to delete temp file:', err)
+    const normalizationHistory = historyByTicker.get(normalizationTicker) || []
+    if (normalizationHistory.length === 0) {
+      return NextResponse.json(
+        { error: `Normalization ticker ${normalizationTicker} not found in data` },
+        { status: 400 }
+      )
+    }
+
+    const normReturns = computeReturns(normalizationHistory)
+    const normReturnMap = new Map(normReturns.map((point) => [point.date, point.value]))
+
+    const zscores: Record<string, number[]> = {}
+    let dates: string[] = []
+
+    for (const ticker of normalizedTickers) {
+      const tickerHistory = historyByTicker.get(ticker) || []
+      if (tickerHistory.length === 0) {
+        continue
+      }
+
+      const tickerReturns = computeReturns(tickerHistory)
+      const relativeReturns: ReturnPoint[] = []
+
+      for (const point of tickerReturns) {
+        const normReturn = normReturnMap.get(point.date)
+        if (normReturn === undefined) {
+          continue
         }
+        relativeReturns.push({
+          date: point.date,
+          value: point.value - normReturn,
+        })
+      }
 
-        if (code !== 0) {
-          console.error('Python script error:', errorOutput)
-          
-          // Check if it's a missing module error
-          let errorMessage = 'Failed to calculate Z-scores'
-          let helpfulMessage = ''
-          
-          if (errorOutput.includes('ModuleNotFoundError') && errorOutput.includes('yfinance')) {
-            errorMessage = 'Python package yfinance not found'
-            const isWindows = process.platform === 'win32'
-            helpfulMessage = `The Python being used is: ${pythonPath}\n\n` +
-              `To fix this, choose one of these options:\n\n` +
-              `1. Zero-install setup (Windows - no Python required):\n` +
-              `   .\\scripts\\install-python-portable.ps1\n\n` +
-              `2. Create a virtual environment (recommended):\n` +
-              `   python -m venv venv\n` +
-              `   ${isWindows ? 'venv\\Scripts\\activate' : 'source venv/bin/activate'}\n` +
-              `   pip install -r requirements.txt\n\n` +
-              `3. Install to system Python:\n` +
-              `   pip install -r requirements.txt\n\n` +
-              `4. Or set PYTHON_PATH to point to a Python with yfinance installed.`
-          } else if (errorOutput.includes('ModuleNotFoundError')) {
-            errorMessage = 'Missing Python package'
-            helpfulMessage = `Please install Python dependencies:\n` +
-              `pip install -r requirements.txt\n\n` +
-              `Or create a virtual environment first:\n` +
-              `python -m venv venv && venv\\Scripts\\activate && pip install -r requirements.txt`
-          }
-          
-          resolve(
-            NextResponse.json(
-              {
-                error: errorMessage,
-                details: errorOutput,
-                help: helpfulMessage || undefined,
-              },
-              { status: 500 }
-            )
-          )
-        } else {
-          try {
-            const result = JSON.parse(output.trim())
-            
-            // Check if Python script returned an error
-            if (result.error) {
-              resolve(
-                NextResponse.json(
-                  { error: result.error },
-                  { status: 400 }
-                )
-              )
-            } else {
-              resolve(NextResponse.json(result))
-            }
-          } catch (err) {
-            console.error('Failed to parse Python output:', err, 'Output:', output)
-            resolve(
-              NextResponse.json(
-                { error: 'Failed to parse results', details: output },
-                { status: 500 }
-              )
-            )
-          }
-        }
-      })
-    })
+      if (relativeReturns.length === 0) {
+        continue
+      }
+
+      const window = Math.min(requestedWindow, relativeReturns.length)
+      const values = relativeReturns.map((point) => point.value)
+      const score = computeScore(values, window, metricKey)
+      zscores[ticker] = score.map((value) => (Number.isFinite(value) ? value : 0))
+
+      if (dates.length === 0) {
+        dates = relativeReturns.map((point) => point.date)
+      }
+    }
+
+    return NextResponse.json({ zscores, dates })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
