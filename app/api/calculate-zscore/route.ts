@@ -132,6 +132,13 @@ const computeRollingStats = (values: number[], window: number) => {
 }
 
 const sanitizeScore = (value: number): number => (Number.isFinite(value) ? value : 0)
+const isLowVol = (value: number): boolean => !Number.isFinite(value) || Math.abs(value) < 1e-12
+const safeDivide = (numerator: number, denominator: number): number => {
+  if (isLowVol(denominator)) {
+    return 0
+  }
+  return numerator / denominator
+}
 
 const computeScore = (values: number[], window: number, metric: string): number[] => {
   const stats = computeRollingStats(values, window)
@@ -139,17 +146,25 @@ const computeScore = (values: number[], window: number, metric: string): number[
     switch (metric) {
       case 'modified_zscore': {
         const denom = 1.4826 * stats.rollingMad[index]
-        return sanitizeScore((value - stats.rollingMedian[index]) / denom)
+        return sanitizeScore(
+          safeDivide(value - stats.rollingMedian[index], denom)
+        )
       }
       case 'iqr': {
-        return sanitizeScore((value - stats.rollingMedian[index]) / stats.rollingIqr[index])
+        return sanitizeScore(
+          safeDivide(value - stats.rollingMedian[index], stats.rollingIqr[index])
+        )
       }
       case 'minmax': {
-        return sanitizeScore((value - stats.rollingMin[index]) / stats.rollingRange[index])
+        return sanitizeScore(
+          safeDivide(value - stats.rollingMin[index], stats.rollingRange[index])
+        )
       }
       case 'zscore':
       default: {
-        return sanitizeScore((value - stats.rollingMean[index]) / stats.rollingStd[index])
+        return sanitizeScore(
+          safeDivide(value - stats.rollingMean[index], stats.rollingStd[index])
+        )
       }
     }
   })
@@ -206,12 +221,16 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const metricKey = String(metric || 'zscore').toLowerCase()
-    const requestedWindow = WINDOW_BY_TIMESCALE[String(timescale || '1M').toUpperCase()] || 21
+    const defaultStatsWindow = WINDOW_BY_TIMESCALE['2Y']
+    const cutoffDate = new Date(requestedEnd)
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 2)
+    const cutoffKey = formatDate(cutoffDate)
+    const fetchStart = cutoffDate
 
     const historyResults = await Promise.all(
       normalizedTickers.map(async (ticker: string) => ({
         ticker,
-        data: await fetchHistorical(ticker, requestedStart, requestedEnd),
+        data: await fetchHistorical(ticker, fetchStart, requestedEnd),
       }))
     )
 
@@ -258,13 +277,30 @@ export async function POST(request: NextRequest): Promise<Response> {
         continue
       }
 
-      const window = Math.min(requestedWindow, relativeReturns.length)
+      const trailingCount = relativeReturns.reduce(
+        (count, point) => (point.date >= cutoffKey ? count + 1 : count),
+        0
+      )
+      const window = Math.min(
+        trailingCount > 1 ? trailingCount : defaultStatsWindow,
+        relativeReturns.length
+      )
       const values = relativeReturns.map((point) => point.value)
       const score = computeScore(values, window, metricKey)
-      zscores[ticker] = score.map((value) => (Number.isFinite(value) ? value : 0))
+      const filtered: number[] = []
+      const filteredDates: string[] = []
+      for (let i = 0; i < relativeReturns.length; i += 1) {
+        if (relativeReturns[i].date >= startDate) {
+          filtered.push(Number.isFinite(score[i]) ? score[i] : 0)
+          if (dates.length === 0) {
+            filteredDates.push(relativeReturns[i].date)
+          }
+        }
+      }
+      zscores[ticker] = filtered
 
       if (dates.length === 0) {
-        dates = relativeReturns.map((point) => point.date)
+        dates = filteredDates
       }
     }
 
