@@ -27,6 +27,17 @@ npm run build
 npm start
 ```
 
+## Pollinations API Key
+
+To enable the Market Summary button for all users, set a server-side key:
+
+1. Create a `.env.local` file in the project root with:
+```
+POLLINATIONS_API_KEY=your_key_here
+```
+
+2. Restart the dev server or redeploy on Vercel with the same env var.
+
 ### Running the Application
 
 1. Start the development server:

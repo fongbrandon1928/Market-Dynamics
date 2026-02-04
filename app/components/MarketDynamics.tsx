@@ -98,6 +98,9 @@ export default function MarketDynamics() {
   const [sectorLoading, setSectorLoading] = useState<boolean>(false)
   const [sectorError, setSectorError] = useState<string>('')
   const [sectorPeriod, setSectorPeriod] = useState<string>('1D')
+  const [marketSummary, setMarketSummary] = useState<string>('')
+  const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
+  const [marketSummaryError, setMarketSummaryError] = useState<string>('')
 
   useEffect(() => {
     // Set default end date to today
@@ -235,6 +238,55 @@ export default function MarketDynamics() {
       console.error('Error generating chart:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleMarketSummary = async () => {
+    setMarketSummaryError('')
+    setMarketSummary('')
+
+    setMarketSummaryLoading(true)
+    try {
+      const sectorSnapshot = ETF_TICKERS.map((ticker) => {
+        const data = sectorReturns[ticker]
+        if (!data) {
+          return `${ticker}: no data`
+        }
+        return `${ticker}: ${(data.dailyReturn * 100).toFixed(2)}% (${data.date})`
+      }).join(', ')
+
+      const response = await fetch('/api/market-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sectorPeriod,
+          sectorSnapshot,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        const errorValue = data?.error || 'Failed to fetch summary'
+        const errorMessage = typeof errorValue === 'string' ? errorValue : JSON.stringify(errorValue)
+        throw new Error(errorMessage)
+      }
+
+      const rawContent = data?.summary
+      const content = typeof rawContent === 'string'
+        ? rawContent
+        : rawContent
+          ? JSON.stringify(rawContent)
+          : ''
+      if (!content || content.trim().includes('[object Object]')) {
+        throw new Error('No summary returned')
+      }
+      setMarketSummary(content)
+    } catch (err) {
+      setMarketSummaryError(err instanceof Error ? err.message : 'Failed to fetch summary')
+    } finally {
+      setMarketSummaryLoading(false)
     }
   }
 
@@ -590,6 +642,51 @@ export default function MarketDynamics() {
             )
           })}
         </div>
+      </div>
+
+      {/* Market Summary */}
+      <div style={{
+        marginTop: '20px',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '8px',
+        padding: '16px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Market Summary</h2>
+          <button
+            onClick={handleMarketSummary}
+            disabled={marketSummaryLoading}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#1E3A8A',
+              color: 'white',
+              border: 'none',
+              borderRadius: '16px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: marketSummaryLoading ? 'not-allowed' : 'pointer',
+              opacity: marketSummaryLoading ? 0.6 : 1,
+            }}
+          >
+            {marketSummaryLoading ? 'Generating...' : 'Get Summary'}
+          </button>
+        </div>
+        {marketSummaryError && (
+          <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
+            {marketSummaryError}
+          </div>
+        )}
+        {marketSummary && (
+          <div style={{ whiteSpace: 'pre-line', fontSize: '14px', color: '#111827' }}>
+            {marketSummary}
+          </div>
+        )}
+        {!marketSummary && !marketSummaryError && (
+          <div style={{ fontSize: '12px', color: '#6B7280' }}>
+            Uses Pollinations API with a server-side key.
+          </div>
+        )}
       </div>
     </div>
   )
