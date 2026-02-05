@@ -98,9 +98,17 @@ export default function MarketDynamics() {
   const [sectorLoading, setSectorLoading] = useState<boolean>(false)
   const [sectorError, setSectorError] = useState<string>('')
   const [sectorPeriod, setSectorPeriod] = useState<string>('1D')
+  const [sectorRelative, setSectorRelative] = useState<Record<string, { value: number; change: number; date: string }>>({})
+  const [sectorRelativeLoading, setSectorRelativeLoading] = useState<boolean>(false)
+  const [sectorRelativeError, setSectorRelativeError] = useState<string>('')
   const [marketSummary, setMarketSummary] = useState<string>('')
   const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
   const [marketSummaryError, setMarketSummaryError] = useState<string>('')
+
+  const getFirstDate = (values: Record<string, { date: string }>): string => {
+    const match = Object.values(values).find((item) => !!item?.date)
+    return match?.date || ''
+  }
 
   useEffect(() => {
     // Set default end date to today
@@ -149,6 +157,56 @@ export default function MarketDynamics() {
     }
 
     fetchSectorReturns()
+  }, [sectorPeriod])
+
+  useEffect(() => {
+    const fetchSectorRelative = async () => {
+      setSectorRelativeLoading(true)
+      setSectorRelativeError('')
+      try {
+        const results = await Promise.allSettled(
+          ETF_TICKERS.map(async (ticker) => {
+            const response = await fetch(`/api/sector-relative?ticker=${ticker}&period=${sectorPeriod}`)
+            const data = await response.json()
+            if (!response.ok) {
+              throw new Error(data?.error || `Failed to fetch ${ticker}`)
+            }
+            return {
+              ticker,
+              value: data.value as number,
+              change: data.change as number,
+              date: data.date as string,
+            }
+          })
+        )
+
+        const nextRelative: Record<string, { value: number; change: number; date: string }> = {}
+        const failures: string[] = []
+
+        results.forEach((result) => {
+          if (result.status === 'fulfilled') {
+            nextRelative[result.value.ticker] = {
+              value: result.value.value,
+              change: result.value.change,
+              date: result.value.date,
+            }
+          } else {
+            failures.push(result.reason instanceof Error ? result.reason.message : String(result.reason))
+          }
+        })
+
+        setSectorRelative(nextRelative)
+        if (failures.length > 0 && Object.keys(nextRelative).length === 0) {
+          setSectorRelativeError(failures[0])
+        }
+      } catch (err) {
+        setSectorRelativeError(err instanceof Error ? err.message : 'Failed to fetch relative prices')
+      } finally {
+        setSectorRelativeLoading(false)
+      }
+    }
+
+    fetchSectorRelative()
   }, [sectorPeriod])
 
   const handleETFChange = async (etf: string) => {
@@ -595,7 +653,9 @@ export default function MarketDynamics() {
         padding: '16px',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Sector Daily Returns</h2>
+          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
+            Sector Daily Returns - {getFirstDate(sectorReturns) ? ` (${getFirstDate(sectorReturns)})` : ''}
+          </h2>
           {sectorLoading && (
             <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
           )}
@@ -633,7 +693,55 @@ export default function MarketDynamics() {
                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
                 {data ? (
                   <div style={{ fontSize: '13px', color: returnColor }}>
-                    {(data.dailyReturn * 100).toFixed(2)}% ({data.date})
+                    {(data.dailyReturn * 100).toFixed(2)}%
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Sector Relative Price vs SPY */}
+      <div style={{
+        marginTop: '20px',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: '8px',
+        padding: '16px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
+            Sector Relative Price vs SPY - {getFirstDate(sectorRelative) ? ` (${getFirstDate(sectorRelative)})` : ''}
+          </h2>
+          {sectorRelativeLoading && (
+            <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
+          )}
+        </div>
+        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '10px' }}>
+          Scaled to 100 at the start of the selected period. Values show relative price vs SPY; daily change shows the most recent move in the relative series.
+        </div>
+        {sectorRelativeError && (
+          <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
+            {sectorRelativeError}
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+          {ETF_TICKERS.map((ticker) => {
+            const data = sectorRelative[ticker]
+            const changeColor = data ? (data.change >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
+            return (
+              <div key={ticker} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
+                {data ? (
+                  <div style={{ fontSize: '13px', color: '#111827' }}>
+                    {data.value.toFixed(2)}
+                    <span style={{ marginLeft: '6px', color: changeColor }}>
+                      {data.change >= 0 ? '+' : ''}
+                      {(data.change * 100).toFixed(2)}%
+                    </span>
                   </div>
                 ) : (
                   <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>
