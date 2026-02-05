@@ -2,53 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from 'recharts'
-
-// Custom tooltip component
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        padding: '10px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      }}>
-        <p style={{ marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-          Date: {label}
-        </p>
-        {payload.map((entry: any, index: number) => {
-          const zscore = typeof entry.value === 'number' ? entry.value : parseFloat(entry.value) || 0
-          const rating = ratingScore(zscore)
-          return (
-            <p key={index} style={{ 
-              margin: '4px 0', 
-              color: entry.color,
-              fontSize: '13px',
-            }}>
-              {entry.name}: {zscore.toFixed(3)} (Rating: {rating.toFixed(0)})
-            </p>
-          )
-        })}
-      </div>
-    )
-  }
-  return null
-}
-
-// Helper function to calculate rating score (moved outside component for tooltip)
-const cumProb = (z: number): number => {
-  // Cumulative probability using standard normal distribution approximation
-  const t = 1 / (1 + 0.2316419 * Math.abs(z))
-  const d = 0.3989423 * Math.exp(-z * z / 2)
-  const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))))
-  return z > 0 ? 1 - prob : prob
-}
-
-const ratingScore = (zscore: number): number => {
-  return 100 * cumProb(zscore)
-}
+import ControlsPanel from './market/ControlsPanel'
+import ScoreChart from './market/ScoreChart'
+import SectorDailyReturnsSection from './market/SectorDailyReturnsSection'
+import SectorRelativeSection from './market/SectorRelativeSection'
+import MarketSummarySection from './market/MarketSummarySection'
 
 const ETF_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLP', 'XLU', 'XLV', 'XLI', 'SMH']
 
@@ -104,11 +62,6 @@ export default function MarketDynamics() {
   const [marketSummary, setMarketSummary] = useState<string>('')
   const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
   const [marketSummaryError, setMarketSummaryError] = useState<string>('')
-
-  const getFirstDate = (values: Record<string, { date: string }>): string => {
-    const match = Object.values(values).find((item) => !!item?.date)
-    return match?.date || ''
-  }
 
   useEffect(() => {
     // Set default end date to today
@@ -388,156 +341,22 @@ export default function MarketDynamics() {
         Market Dynamics
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {/* Ticker List */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Ticker List</label>
-            <textarea
-              value={tickerList}
-              onChange={(e) => setTickerList(e.target.value)}
-              placeholder="Enter tickers separated by commas"
-              style={{
-                width: '100%',
-                minHeight: '100px',
-                padding: '10px',
-                border: '2px solid #87CEEB',
-                borderRadius: '4px',
-                backgroundColor: '#E0F6FF',
-                fontSize: '14px',
-                fontFamily: 'monospace',
-              }}
-            />
-          </div>
-
-          {/* Dates */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '2px solid #90EE90',
-                  borderRadius: '4px',
-                  backgroundColor: '#F0FFF0',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '2px solid #90EE90',
-                  borderRadius: '4px',
-                  backgroundColor: '#F0FFF0',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Normalization Ticker */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Normalization Ticker</label>
-            <input
-              type="text"
-              value={normalizationTicker}
-              onChange={(e) => setNormalizationTicker(e.target.value)}
-              placeholder="e.g., SPY"
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px solid #87CEEB',
-                borderRadius: '4px',
-                backgroundColor: '#E0F6FF',
-                fontSize: '14px',
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          {/* Dropdown */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Select ETF</label>
-            <select
-              value={selectedETF}
-              onChange={(e) => handleETFChange(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: 'white',
-                fontSize: '14px',
-                appearance: 'none',
-                backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 10px center',
-                backgroundSize: '16px',
-                paddingRight: '35px',
-              }}
-            >
-              <option value="">Select an ETF...</option>
-              {ETF_TICKERS.map(ticker => (
-                <option key={ticker} value={ticker}>{ticker}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <button
-              onClick={handleGenerate}
-              disabled={loading}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#1E3A8A',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1,
-                width: '100%',
-              }}
-            >
-              {loading ? 'Generating...' : 'Generate'}
-            </button>
-
-            <button
-              onClick={handleSectorRotation}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#1E3A8A',
-                color: 'white',
-                border: 'none',
-                borderRadius: '20px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                width: '100%',
-              }}
-            >
-              Sector Rotation
-            </button>
-          </div>
-
-        </div>
-      </div>
+      <ControlsPanel
+        tickerList={tickerList}
+        onTickerListChange={setTickerList}
+        startDate={startDate}
+        onStartDateChange={setStartDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        normalizationTicker={normalizationTicker}
+        onNormalizationTickerChange={setNormalizationTicker}
+        selectedETF={selectedETF}
+        onETFChange={handleETFChange}
+        etfTickers={ETF_TICKERS}
+        onGenerate={handleGenerate}
+        onSectorRotation={handleSectorRotation}
+        loading={loading}
+      />
 
       {/* Error Message */}
       {error && (
@@ -552,259 +371,37 @@ export default function MarketDynamics() {
         </div>
       )}
 
-      {/* Chart Area */}
-      <div style={{
-        backgroundColor: '#F0FFF0',
-        border: '2px solid #90EE90',
-        borderRadius: '8px',
-        padding: '20px',
-        minHeight: '500px',
-        position: 'relative',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Score Chart</h2>
-            <select
-              value={metric}
-              onChange={(e) => setMetric(e.target.value as MetricOption)}
-              style={{
-                padding: '6px 10px',
-                border: '1px solid #ccc',
-                borderRadius: '8px',
-                fontSize: '12px',
-                backgroundColor: 'white',
-              }}
-            >
-              {METRIC_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={handleDownloadChartData}
-            disabled={chartData.length === 0}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#1E3A8A',
-              color: 'white',
-              border: 'none',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: chartData.length === 0 ? 'not-allowed' : 'pointer',
-              opacity: chartData.length === 0 ? 0.5 : 1,
-            }}
-          >
-            Download Chart Data
-          </button>
-        </div>
+      <ScoreChart
+        chartData={chartData}
+        metric={metric}
+        metricOptions={METRIC_OPTIONS}
+        onMetricChange={(value) => setMetric(value as MetricOption)}
+        onDownload={handleDownloadChartData}
+        loading={loading}
+      />
 
-        {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Brush dataKey="date" height={20} stroke="#1E3A8A" />
-              {Object.keys(chartData[0] || {})
-                .filter(key => key !== 'date')
-                .map((ticker, index) => {
-                  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff', '#00ffff', '#ffff00']
-                  return (
-                    <Area
-                      key={ticker}
-                      type="monotone"
-                      dataKey={ticker}
-                      stroke={colors[index % colors.length]}
-                      strokeWidth={1.5}
-                      fill={colors[index % colors.length]}
-                      fillOpacity={0.12}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  )
-                })}
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '400px',
-            color: '#666',
-            fontSize: '16px',
-          }}>
-            {loading ? 'Loading chart data...' : 'Click Generate to create Z-score chart'}
-          </div>
-        )}
-      </div>
+      <SectorDailyReturnsSection
+        etfTickers={ETF_TICKERS}
+        sectorReturns={sectorReturns}
+        sectorLoading={sectorLoading}
+        sectorError={sectorError}
+        sectorPeriod={sectorPeriod}
+        onSectorPeriodChange={setSectorPeriod}
+      />
 
-      {/* Sector Daily Returns */}
-      <div style={{
-        marginTop: '20px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        padding: '16px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
-            Sector Daily Returns - {getFirstDate(sectorReturns) ? ` (${getFirstDate(sectorReturns)})` : ''}
-          </h2>
-          {sectorLoading && (
-            <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>Timeframe</label>
-          <select
-            value={sectorPeriod}
-            onChange={(e) => setSectorPeriod(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              border: '1px solid #ccc',
-              borderRadius: '8px',
-              fontSize: '12px',
-              backgroundColor: 'white',
-            }}
-          >
-            <option value="1D">1 Day</option>
-            <option value="1W">1 Week</option>
-            <option value="1M">1 Month</option>
-            <option value="1Q">1 Quarter</option>
-          </select>
-        </div>
-        {sectorError && (
-          <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
-            {sectorError}
-          </div>
-        )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
-          {ETF_TICKERS.map((ticker) => {
-            const data = sectorReturns[ticker]
-            const returnColor = data ? (data.dailyReturn >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
-            return (
-              <div key={ticker} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
-                {data ? (
-                  <div style={{ fontSize: '13px', color: '#111827' }}>
-                    {data.price.toFixed(2)}{' '}
-                    <span style={{ color: returnColor }}>
-                      ({(data.dailyReturn * 100).toFixed(2)}%)
-                    </span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      <SectorRelativeSection
+        etfTickers={ETF_TICKERS}
+        sectorRelative={sectorRelative}
+        sectorRelativeLoading={sectorRelativeLoading}
+        sectorRelativeError={sectorRelativeError}
+      />
 
-      {/* Sector Relative Price vs SPY */}
-      <div style={{
-        marginTop: '20px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        padding: '16px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
-            Sector Relative Price vs SPY - {getFirstDate(sectorRelative) ? ` (${getFirstDate(sectorRelative)})` : ''}
-          </h2>
-          {sectorRelativeLoading && (
-            <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
-          )}
-        </div>
-        <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '10px' }}>
-          Scaled to 100 at the start of the selected period. Values show relative price vs SPY; daily change shows the most recent move in the relative series.
-        </div>
-        {sectorRelativeError && (
-          <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
-            {sectorRelativeError}
-          </div>
-        )}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
-          {ETF_TICKERS.map((ticker) => {
-            const data = sectorRelative[ticker]
-            const changeColor = data ? (data.change >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
-            return (
-              <div key={ticker} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
-                {data ? (
-                  <div style={{ fontSize: '13px', color: '#111827' }}>
-                    {data.value.toFixed(2)}
-                    <span style={{ marginLeft: '6px', color: changeColor }}>
-                      {data.change >= 0 ? '+' : ''}
-                      {(data.change * 100).toFixed(2)}%
-                    </span>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Market Summary */}
-      <div style={{
-        marginTop: '20px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        padding: '16px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Market Summary</h2>
-          <button
-            onClick={handleMarketSummary}
-            disabled={marketSummaryLoading}
-            style={{
-              padding: '8px 14px',
-              backgroundColor: '#1E3A8A',
-              color: 'white',
-              border: 'none',
-              borderRadius: '16px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: marketSummaryLoading ? 'not-allowed' : 'pointer',
-              opacity: marketSummaryLoading ? 0.6 : 1,
-            }}
-          >
-            {marketSummaryLoading ? 'Generating...' : 'Get Summary'}
-          </button>
-        </div>
-        {marketSummaryError && (
-          <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
-            {marketSummaryError}
-          </div>
-        )}
-        {marketSummary && (
-          <div style={{ whiteSpace: 'pre-line', fontSize: '14px', color: '#111827' }}>
-            {marketSummary}
-          </div>
-        )}
-        {!marketSummary && !marketSummaryError && (
-          <div style={{ fontSize: '12px', color: '#6B7280' }}>
-            Uses Pollinations API with a server-side key.
-          </div>
-        )}
-      </div>
+      <MarketSummarySection
+        marketSummary={marketSummary}
+        marketSummaryLoading={marketSummaryLoading}
+        marketSummaryError={marketSummaryError}
+        onGenerateSummary={handleMarketSummary}
+      />
     </div>
   )
 }
