@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
 
 export const runtime = 'nodejs'
-const yahooFinance = new YahooFinance()
+const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
 const PERIOD_DAYS: Record<string, number> = {
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       ticker,
       date: formatDate(last.date),
       period,
+      price: last.close,
       dailyReturn,
     })
   } catch (error) {

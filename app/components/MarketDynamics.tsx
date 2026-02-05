@@ -94,7 +94,7 @@ export default function MarketDynamics() {
   const [metric, setMetric] = useState<MetricOption>('zscore')
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
-  const [sectorReturns, setSectorReturns] = useState<Record<string, { dailyReturn: number; date: string }>>({})
+  const [sectorReturns, setSectorReturns] = useState<Record<string, { dailyReturn: number; date: string; price: number }>>({})
   const [sectorLoading, setSectorLoading] = useState<boolean>(false)
   const [sectorError, setSectorError] = useState<string>('')
   const [sectorPeriod, setSectorPeriod] = useState<string>('1D')
@@ -127,11 +127,16 @@ export default function MarketDynamics() {
             if (!response.ok) {
               throw new Error(data?.error || `Failed to fetch ${ticker}`)
             }
-            return { ticker, dailyReturn: data.dailyReturn as number, date: data.date as string }
+            return {
+              ticker,
+              dailyReturn: data.dailyReturn as number,
+              date: data.date as string,
+              price: data.price as number,
+            }
           })
         )
 
-        const nextReturns: Record<string, { dailyReturn: number; date: string }> = {}
+        const nextReturns: Record<string, { dailyReturn: number; date: string; price: number }> = {}
         const failures: string[] = []
 
         results.forEach((result) => {
@@ -139,6 +144,7 @@ export default function MarketDynamics() {
             nextReturns[result.value.ticker] = {
               dailyReturn: result.value.dailyReturn,
               date: result.value.date,
+              price: result.value.price,
             }
           } else {
             failures.push(result.reason instanceof Error ? result.reason.message : String(result.reason))
@@ -692,8 +698,11 @@ export default function MarketDynamics() {
               <div key={ticker} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
                 <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
                 {data ? (
-                  <div style={{ fontSize: '13px', color: returnColor }}>
-                    {(data.dailyReturn * 100).toFixed(2)}%
+                  <div style={{ fontSize: '13px', color: '#111827' }}>
+                    {data.price.toFixed(2)}{' '}
+                    <span style={{ color: returnColor }}>
+                      ({(data.dailyReturn * 100).toFixed(2)}%)
+                    </span>
                   </div>
                 ) : (
                   <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>

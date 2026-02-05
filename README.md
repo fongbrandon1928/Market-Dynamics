@@ -5,7 +5,7 @@ A Next.js application for analyzing market dynamics with Z-score calculations an
 ## Setup
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18+ 
 - npm
 
 ### Installation

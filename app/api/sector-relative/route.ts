@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
 
 export const runtime = 'nodejs'
-const yahooFinance = new YahooFinance()
+const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
 const PERIOD_DAYS: Record<string, number> = {
   '1D': 2,
