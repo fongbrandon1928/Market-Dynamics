@@ -6,6 +6,7 @@ import ControlsPanel from './market/ControlsPanel'
 import ScoreChart from './market/ScoreChart'
 import SectorDailyReturnsSection from './market/SectorDailyReturnsSection'
 import SectorRelativeSection from './market/SectorRelativeSection'
+import SectorRotationSection from './market/SectorRotationSection'
 import MarketSummarySection from './market/MarketSummarySection'
 
 const ETF_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLP', 'XLU', 'XLV', 'XLI', 'SMH']
@@ -396,6 +397,13 @@ export default function MarketDynamics() {
         sectorRelative={sectorRelative}
         sectorRelativeLoading={sectorRelativeLoading}
         sectorRelativeError={sectorRelativeError}
+      />
+
+      <SectorRotationSection
+        sectorReturns={sectorReturns}
+        sectorLoading={sectorLoading}
+        sectorError={sectorError}
+        sectorPeriod={sectorPeriod}
       />
 
       <MarketSummarySection
