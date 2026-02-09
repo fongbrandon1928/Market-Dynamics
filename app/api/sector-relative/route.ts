@@ -5,10 +5,13 @@ export const runtime = 'nodejs'
 const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
 const PERIOD_DAYS: Record<string, number> = {
-  '1D': 2,
+  '1D': 8,
   '1W': 8,
   '1M': 32,
   '1Q': 93,
+  '1Y': 370,
+  '2Y': 740,
+  '5Y': 1850,
 }
 
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
@@ -52,51 +55,40 @@ export async function GET(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Invalid period' }, { status: 400 })
     }
 
-    const [sectorSeries, spySeries] = await Promise.all([
-      fetchSeries(ticker, period),
-      fetchSeries('SPY', period),
-    ])
+    const sectorSeries = await fetchSeries(ticker, period)
 
-    if (sectorSeries.length < 2 || spySeries.length < 2) {
-      return NextResponse.json({ error: 'Not enough data to calculate relative price' }, { status: 400 })
+    if (sectorSeries.length < 2) {
+      return NextResponse.json({ error: 'Not enough data to calculate scaled price' }, { status: 400 })
     }
 
-    const spyMap = new Map(spySeries.map((point) => [formatDate(point.date), point.close]))
-    const aligned = sectorSeries
-      .map((point) => {
-        const dateKey = formatDate(point.date)
-        const spyClose = spyMap.get(dateKey)
-        if (!spyClose) {
-          return null
-        }
-        return {
-          date: dateKey,
-          ratio: point.close / spyClose,
-        }
-      })
-      .filter((point): point is { date: string; ratio: number } => !!point)
-
-    if (aligned.length < 2) {
-      return NextResponse.json({ error: 'Not enough aligned data' }, { status: 400 })
+    const seriesForPeriod = period === '1D' ? sectorSeries.slice(-2) : sectorSeries
+    if (seriesForPeriod.length < 2) {
+      return NextResponse.json({ error: 'Not enough data to calculate scaled price' }, { status: 400 })
     }
 
-    const base = aligned[0].ratio
+    const aligned = seriesForPeriod.map((point) => ({
+      date: formatDate(point.date),
+      close: point.close,
+    }))
+
+    const base = aligned[0].close
     if (!Number.isFinite(base) || base === 0) {
-      return NextResponse.json({ error: 'Invalid base ratio' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid base price' }, { status: 400 })
     }
 
     const scaled = aligned.map((point) => ({
       date: point.date,
-      value: (point.ratio / base) * 100,
+      value: (point.close / base) * 100,
     }))
     const last = scaled[scaled.length - 1]
-    const prev = scaled[scaled.length - 2]
-    const change = prev.value === 0 ? 0 : last.value / prev.value - 1
+    const baseValue = scaled[0].value
+    const change = baseValue === 0 ? 0 : last.value / baseValue - 1
 
     return NextResponse.json({
       ticker,
       value: last.value,
       date: last.date,
+      baseDate: scaled[0].date,
       change,
       period,
     })

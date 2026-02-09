@@ -1,4 +1,4 @@
-type SectorRelative = Record<string, { value: number; change: number; date: string }>
+type SectorRelative = Record<string, { value: number; change: number; date: string; baseDate: string }>
 
 type SectorRelativeSectionProps = {
   etfTickers: string[]
@@ -7,9 +7,9 @@ type SectorRelativeSectionProps = {
   sectorRelativeError: string
 }
 
-const getFirstDate = (values: Record<string, { date: string }>): string => {
-  const match = Object.values(values).find((item) => !!item?.date)
-  return match?.date || ''
+const getFirstDate = (values: Record<string, { baseDate: string }>): string => {
+  const match = Object.values(values).find((item) => !!item?.baseDate)
+  return match?.baseDate || ''
 }
 
 export default function SectorRelativeSection({
@@ -29,14 +29,14 @@ export default function SectorRelativeSection({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
-          Sector Relative Price vs SPY{headerDate ? ` (${headerDate})` : ''}
+          Sector Relative Price{headerDate ? ` (${headerDate})` : ''}
         </h2>
         {sectorRelativeLoading && (
           <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
         )}
       </div>
       <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '10px' }}>
-        Scaled to 100 at the start of the selected period. Values show relative price vs SPY; daily change shows the most recent move in the relative series.
+        Scaled to 100 at the start of the selected period. Values show price relative to the baseline; change shows the move vs the period start.
       </div>
       {sectorRelativeError && (
         <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>

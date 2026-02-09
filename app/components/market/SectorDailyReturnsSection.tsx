@@ -33,7 +33,7 @@ export default function SectorDailyReturnsSection({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
-          Sector Daily Returns{headerDate ? ` (${headerDate})` : ''}
+          Sector Period Return{headerDate ? ` (${headerDate})` : ''}
         </h2>
         {sectorLoading && (
           <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
@@ -56,6 +56,9 @@ export default function SectorDailyReturnsSection({
           <option value="1W">1 Week</option>
           <option value="1M">1 Month</option>
           <option value="1Q">1 Quarter</option>
+          <option value="1Y">1 Year</option>
+          <option value="2Y">2 Years</option>
+          <option value="5Y">5 Years</option>
         </select>
       </div>
       {sectorError && (

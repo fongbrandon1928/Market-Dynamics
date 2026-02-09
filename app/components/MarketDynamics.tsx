@@ -56,7 +56,7 @@ export default function MarketDynamics() {
   const [sectorLoading, setSectorLoading] = useState<boolean>(false)
   const [sectorError, setSectorError] = useState<string>('')
   const [sectorPeriod, setSectorPeriod] = useState<string>('1D')
-  const [sectorRelative, setSectorRelative] = useState<Record<string, { value: number; change: number; date: string }>>({})
+  const [sectorRelative, setSectorRelative] = useState<Record<string, { value: number; change: number; date: string; baseDate: string }>>({})
   const [sectorRelativeLoading, setSectorRelativeLoading] = useState<boolean>(false)
   const [sectorRelativeError, setSectorRelativeError] = useState<string>('')
   const [marketSummary, setMarketSummary] = useState<string>('')
@@ -135,11 +135,12 @@ export default function MarketDynamics() {
               value: data.value as number,
               change: data.change as number,
               date: data.date as string,
+              baseDate: data.baseDate as string,
             }
           })
         )
 
-        const nextRelative: Record<string, { value: number; change: number; date: string }> = {}
+        const nextRelative: Record<string, { value: number; change: number; date: string; baseDate: string }> = {}
         const failures: string[] = []
 
         results.forEach((result) => {
@@ -148,6 +149,7 @@ export default function MarketDynamics() {
               value: result.value.value,
               change: result.value.change,
               date: result.value.date,
+              baseDate: result.value.baseDate,
             }
           } else {
             failures.push(result.reason instanceof Error ? result.reason.message : String(result.reason))

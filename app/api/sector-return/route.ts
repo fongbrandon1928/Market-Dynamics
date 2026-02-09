@@ -6,10 +6,13 @@ const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
 const PERIOD_DAYS: Record<string, number> = {
-  '1D': 2,
+  '1D': 8,
   '1W': 8,
   '1M': 32,
   '1Q': 93,
+  '1Y': 370,
+  '2Y': 740,
+  '5Y': 1850,
 }
 
 type HistoricalPoint = {
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const last = points[points.length - 1]
-    const first = points[0]
+    const first = period === '1D' ? points[points.length - 2] : points[0]
 
     if (!last.close || !first.close) {
       return NextResponse.json({ error: 'Invalid price data' }, { status: 400 })
