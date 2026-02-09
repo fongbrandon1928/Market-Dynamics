@@ -75,9 +75,10 @@ export default function SectorDailyReturnsSection({
               <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
               {data ? (
                 <div style={{ fontSize: '13px', color: '#111827' }}>
-                  {data.price.toFixed(2)}{' '}
-                  <span style={{ color: returnColor }}>
-                    ({(data.dailyReturn * 100).toFixed(2)}%)
+                  {data.price.toFixed(2)}
+                  <span style={{ marginLeft: '6px', color: returnColor }}>
+                    {data.dailyReturn >= 0 ? '+' : ''}
+                    {(data.dailyReturn * 100).toFixed(2)}%
                   </span>
                 </div>
               ) : (
