@@ -120,6 +120,8 @@ export default function MarketDynamics() {
     }
 
     fetchSectorReturns()
+    const intervalId = window.setInterval(fetchSectorReturns, 60000)
+    return () => window.clearInterval(intervalId)
   }, [sectorPeriod])
 
   useEffect(() => {
@@ -172,6 +174,8 @@ export default function MarketDynamics() {
     }
 
     fetchSectorRelative()
+    const intervalId = window.setInterval(fetchSectorRelative, 60000)
+    return () => window.clearInterval(intervalId)
   }, [sectorPeriod])
 
   useEffect(() => {
@@ -193,6 +197,8 @@ export default function MarketDynamics() {
     }
 
     fetchSectorRotation()
+    const intervalId = window.setInterval(fetchSectorRotation, 60000)
+    return () => window.clearInterval(intervalId)
   }, [sectorPeriod])
 
   const handleETFChange = async (etf: string) => {
