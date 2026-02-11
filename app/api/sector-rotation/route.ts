@@ -58,6 +58,35 @@ const fetchSeries = async (ticker: string, startDate: Date, endDate: Date): Prom
     .sort((a, b) => a.date.getTime() - b.date.getTime())
 }
 
+const getWeekKey = (date: Date): string => {
+  const utc = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  const day = utc.getUTCDay() || 7
+  utc.setUTCDate(utc.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1))
+  const weekNo = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+  return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`
+}
+
+const toWeeklyCloses = (series: HistoricalPoint[]) => {
+  const weeklyMap = new Map<string, HistoricalPoint>()
+  series.forEach((point) => {
+    const key = getWeekKey(point.date)
+    const existing = weeklyMap.get(key)
+    if (!existing || point.date.getTime() >= existing.date.getTime()) {
+      weeklyMap.set(key, point)
+    }
+  })
+  return Array.from(weeklyMap.values()).sort((a, b) => a.date.getTime() - b.date.getTime())
+}
+
+const computeSma = (values: number[], window: number): number => {
+  if (values.length < window) {
+    return Number.NaN
+  }
+  const slice = values.slice(-window)
+  return mean(slice)
+}
+
 const alignSeries = (sector: HistoricalPoint[], spy: HistoricalPoint[]) => {
   const spyMap = new Map(spy.map((point) => [formatDate(point.date), point.close]))
   return sector
@@ -137,6 +166,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     const periodStartKey = formatDate(periodStart)
     const sectorMetrics: Record<string, any> = {}
     const periodReturns: number[] = []
+    const above40: string[] = []
+    const below40: string[] = []
+    const breakAbove40: string[] = []
+    const breakBelow40: string[] = []
 
     tickers.forEach((ticker, index) => {
       const series = sectorSeries[index] || []
@@ -173,6 +206,35 @@ export async function GET(request: NextRequest): Promise<Response> {
       const ma20 = ma20Values.length === 20 ? mean(ma20Values) : Number.NaN
       const ma50 = ma50Values.length === 50 ? mean(ma50Values) : Number.NaN
 
+      const weeklySeries = toWeeklyCloses(series)
+      const weeklyCloses = weeklySeries.map((point) => point.close)
+      const weeklySma18 = computeSma(weeklyCloses, 18)
+      const weeklySma40 = computeSma(weeklyCloses, 40)
+      const prevWeeklySma40 = weeklyCloses.length > 40 ? mean(weeklyCloses.slice(-41, -1)) : Number.NaN
+      const lastWeeklyClose = weeklyCloses[weeklyCloses.length - 1]
+      const prevWeeklyClose = weeklyCloses[weeklyCloses.length - 2]
+
+      const isAbove40 = Number.isFinite(weeklySma40) && lastWeeklyClose > weeklySma40
+      const isBelow40 = Number.isFinite(weeklySma40) && lastWeeklyClose < weeklySma40
+      if (isAbove40) {
+        above40.push(ticker)
+      }
+      if (isBelow40) {
+        below40.push(ticker)
+      }
+      const crossedAbove = Number.isFinite(prevWeeklySma40)
+        && prevWeeklyClose <= prevWeeklySma40
+        && lastWeeklyClose > weeklySma40
+      const crossedBelow = Number.isFinite(prevWeeklySma40)
+        && prevWeeklyClose >= prevWeeklySma40
+        && lastWeeklyClose < weeklySma40
+      if (crossedAbove) {
+        breakAbove40.push(ticker)
+      }
+      if (crossedBelow) {
+        breakBelow40.push(ticker)
+      }
+
       const returnSeries = []
       for (let i = 1; i < priceSeries.length; i += 1) {
         const prev = priceSeries[i - 1].value
@@ -192,6 +254,10 @@ export async function GET(request: NextRequest): Promise<Response> {
         quadrant: getQuadrant(rsIndex, rsMomentum),
         belowMA20: Number.isFinite(ma20) ? lastClose < ma20 : false,
         belowMA50: Number.isFinite(ma50) ? lastClose < ma50 : false,
+        weeklySma18,
+        weeklySma40,
+        aboveWeekly40: isAbove40,
+        belowWeekly40: isBelow40,
         volatility: Number.isFinite(vol) ? vol : 0,
       }
     })
@@ -231,6 +297,12 @@ export async function GET(request: NextRequest): Promise<Response> {
       periodEnd: formatDate(endDate),
       rotationDetected,
       dispersion,
+      technicals: {
+        above40,
+        below40,
+        breakAbove40,
+        breakBelow40,
+      },
       offenseDefensive: {
         cyclicalAvg,
         defensiveAvg,

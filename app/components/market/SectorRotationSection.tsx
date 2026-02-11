@@ -32,9 +32,11 @@ export default function SectorRotationSection({
   const topRelative = [...sectorEntries].sort((a, b) => b.rsIndex - a.rsIndex).slice(0, 3)
   const bottomRelative = [...sectorEntries].sort((a, b) => a.rsIndex - b.rsIndex).slice(0, 3)
 
-  const ma20Breaks = sectorEntries.filter((item) => item.belowMA20).length
-  const ma50Breaks = sectorEntries.filter((item) => item.belowMA50).length
-  const topVolatility = [...sectorEntries].sort((a, b) => b.volatility - a.volatility).slice(0, 3)
+  const technicals = rotationData?.technicals || {}
+  const above40 = Array.isArray(technicals.above40) ? technicals.above40 : []
+  const below40 = Array.isArray(technicals.below40) ? technicals.below40 : []
+  const breakAbove40 = Array.isArray(technicals.breakAbove40) ? technicals.breakAbove40 : []
+  const breakBelow40 = Array.isArray(technicals.breakBelow40) ? technicals.breakBelow40 : []
 
   return (
     <div style={{
@@ -125,12 +127,15 @@ export default function SectorRotationSection({
             </div>
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-            <div style={{ fontWeight: '600', marginBottom: '6px' }}>Trend & Volatility</div>
+            <div style={{ fontWeight: '600', marginBottom: '6px' }}>Technical Indicator Analysis</div>
             <div style={{ fontSize: '12px', color: '#111827' }}>
-              Below MA20: {ma20Breaks} | Below MA50: {ma50Breaks}
+              Weekly trend: 18-week / 40-week SMAs.
             </div>
             <div style={{ fontSize: '12px', color: '#111827', marginTop: '4px' }}>
-              Highest vol: {topVolatility.map((item) => `${item.ticker} ${(item.volatility * 100).toFixed(2)}%`).join(', ') || 'None'}
+              Breaks above 40W: {breakAbove40.join(', ') || 'None'} | Breaks below 40W: {breakBelow40.join(', ') || 'None'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#111827', marginTop: '4px' }}>
+              Above 40W: {above40.join(', ') || 'None'} | Below 40W: {below40.join(', ') || 'None'}
             </div>
           </div>
         </div>
