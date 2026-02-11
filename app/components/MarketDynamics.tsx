@@ -63,6 +63,9 @@ export default function MarketDynamics() {
   const [marketSummary, setMarketSummary] = useState<string>('')
   const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
   const [marketSummaryError, setMarketSummaryError] = useState<string>('')
+  const [sectorRotation, setSectorRotation] = useState<any>(null)
+  const [sectorRotationLoading, setSectorRotationLoading] = useState<boolean>(false)
+  const [sectorRotationError, setSectorRotationError] = useState<string>('')
 
   useEffect(() => {
     // Set default end date to today
@@ -169,6 +172,27 @@ export default function MarketDynamics() {
     }
 
     fetchSectorRelative()
+  }, [sectorPeriod])
+
+  useEffect(() => {
+    const fetchSectorRotation = async () => {
+      setSectorRotationLoading(true)
+      setSectorRotationError('')
+      try {
+        const response = await fetch(`/api/sector-rotation?period=${sectorPeriod}&tickers=${ETF_TICKERS.join(',')}`)
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data?.error || 'Failed to fetch sector rotation')
+        }
+        setSectorRotation(data)
+      } catch (err) {
+        setSectorRotationError(err instanceof Error ? err.message : 'Failed to fetch sector rotation')
+      } finally {
+        setSectorRotationLoading(false)
+      }
+    }
+
+    fetchSectorRotation()
   }, [sectorPeriod])
 
   const handleETFChange = async (etf: string) => {
@@ -400,9 +424,9 @@ export default function MarketDynamics() {
       />
 
       <SectorRotationSection
-        sectorReturns={sectorReturns}
-        sectorLoading={sectorLoading}
-        sectorError={sectorError}
+        rotationData={sectorRotation}
+        sectorLoading={sectorRotationLoading}
+        sectorError={sectorRotationError}
         sectorPeriod={sectorPeriod}
       />
 

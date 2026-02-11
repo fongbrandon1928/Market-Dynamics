@@ -221,11 +221,11 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const metricKey = String(metric || 'zscore').toLowerCase()
-    const defaultStatsWindow = WINDOW_BY_TIMESCALE['2Y']
-    const cutoffDate = new Date(requestedEnd)
-    cutoffDate.setFullYear(cutoffDate.getFullYear() - 2)
-    const cutoffKey = formatDate(cutoffDate)
-    const fetchStart = cutoffDate
+    const timescaleKey = String(timescale || '2Y').toUpperCase()
+    const defaultStatsWindow = WINDOW_BY_TIMESCALE[timescaleKey] || WINDOW_BY_TIMESCALE['2Y']
+    const cutoffKey = formatDate(requestedStart)
+    const fetchStart = new Date(requestedStart)
+    fetchStart.setDate(fetchStart.getDate() - defaultStatsWindow * 2)
 
     const historyResults = await Promise.all(
       normalizedTickers.map(async (ticker: string) => ({
