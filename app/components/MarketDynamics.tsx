@@ -299,6 +299,19 @@ export default function MarketDynamics() {
         return `${ticker}: ${(data.dailyReturn * 100).toFixed(2)}% (${data.date})`
       }).join(', ')
 
+      const rotationSnapshot = sectorRotation
+        ? JSON.stringify({
+          rotationDetected: sectorRotation.rotationDetected,
+          dispersion: sectorRotation.dispersion,
+          offenseDefensive: sectorRotation.offenseDefensive,
+          yieldCurve: sectorRotation.yieldCurve,
+          period: sectorRotation.period,
+          periodStart: sectorRotation.periodStart,
+          periodEnd: sectorRotation.periodEnd,
+          sectors: sectorRotation.sectors,
+        })
+        : ''
+
       const response = await fetch('/api/market-summary', {
         method: 'POST',
         headers: {
@@ -307,6 +320,7 @@ export default function MarketDynamics() {
         body: JSON.stringify({
           sectorPeriod,
           sectorSnapshot,
+          rotationSnapshot,
         }),
       })
 

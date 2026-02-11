@@ -15,10 +15,12 @@ export async function POST(request: NextRequest): Promise<Response> {
     const body = await request.json()
     const sectorPeriod = String(body?.sectorPeriod || '1D')
     const sectorSnapshot = String(body?.sectorSnapshot || '')
+    const rotationSnapshot = String(body?.rotationSnapshot || '')
 
     const prompt =
       `Summarize today’s market action and any sector rotation in plain English. ` +
       `Use this sector return snapshot for context (period: ${sectorPeriod}): ${sectorSnapshot} ` +
+      (rotationSnapshot ? `Use this sector rotation signal data for context: ${rotationSnapshot} ` : '') +
       `Use 4-6 bullets.`
 
     const textUrl = `https://text.pollinations.ai/prompt/${encodeURIComponent(prompt)}`
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         messages: [
           {
             role: 'system',
-            content: 'You are a concise market analyst. Summarize today’s market and note any sector rotation. Use 4-6 bullets.',
+            content: 'You are a concise market analyst. Summarize today’s market and note any sector rotation using the provided data. Use 4-6 bullets.',
           },
           {
             role: 'user',
