@@ -64,18 +64,40 @@ export default function SectorRotationSection({
       )}
       {sectorEntries.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-            <div style={{ fontWeight: '600', marginBottom: '6px' }}>
-              {rotationData?.rotationDetected ? 'Rotation detected' : 'No clear rotation signal'}
+          <div style={{
+            border: rotationData?.rotationDetected ? '1px solid #16A34A' : '1px solid #E5E7EB',
+            borderRadius: '6px',
+            padding: '10px',
+            backgroundColor: rotationData?.rotationDetected ? '#F0FDF4' : '#FFFFFF',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <div style={{ fontWeight: '600' }}>
+                {rotationData?.rotationDetected ? 'Rotation detected' : 'No clear rotation signal'}
+              </div>
+              <span style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                backgroundColor: rotationData?.rotationDetected ? '#DCFCE7' : '#E5E7EB',
+                color: rotationData?.rotationDetected ? '#166534' : '#374151',
+                fontWeight: 600,
+              }}>
+                {rotationData?.rotationDetected ? 'Active' : 'Neutral'}
+              </span>
             </div>
             <div style={{ fontSize: '12px', color: '#374151' }}>
               Dispersion: {((rotationData?.dispersion ?? 0) * 100).toFixed(2)}% | Period: {sectorPeriod}
             </div>
             <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
-              Offense vs Defensive: {(rotationData?.offenseDefensive?.spread ?? 0 * 100).toFixed(2)}% spread
+              Offense vs Defensive: {(((rotationData?.offenseDefensive?.spread ?? 0) * 100)).toFixed(2)}% spread
+              {rotationData?.offenseDefensive?.riskOff ? ' (Risk-off)' : ' (Risk-on)'}
             </div>
             <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
               Yield Curve: {(rotationData?.yieldCurve?.spread ?? 0).toFixed(2)} (10Y-3M)
+              {rotationData?.yieldCurve?.inverted ? ' (Inverted)' : ''}
+            </div>
+            <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
+              10Y change: {(((rotationData?.yieldCurve?.rateChange ?? 0) * 100)).toFixed(2)}% | Window: {rotationData?.periodStart} to {rotationData?.periodEnd}
             </div>
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
