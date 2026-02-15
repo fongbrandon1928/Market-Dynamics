@@ -1,4 +1,4 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts'
 
 type ChartDataPoint = {
   date: string
@@ -19,19 +19,6 @@ type ScoreChartProps = {
   loading: boolean
 }
 
-// Helper function to calculate rating score (moved outside component for tooltip)
-const cumProb = (z: number): number => {
-  // Cumulative probability using standard normal distribution approximation
-  const t = 1 / (1 + 0.2316419 * Math.abs(z))
-  const d = 0.3989423 * Math.exp(-z * z / 2)
-  const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))))
-  return z > 0 ? 1 - prob : prob
-}
-
-const ratingScore = (zscore: number): number => {
-  return 100 * cumProb(zscore)
-}
-
 // Custom tooltip component
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -47,15 +34,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           Date: {label}
         </p>
         {payload.map((entry: any, index: number) => {
-          const zscore = typeof entry.value === 'number' ? entry.value : parseFloat(entry.value) || 0
-          const rating = ratingScore(zscore)
+          const value = typeof entry.value === 'number' ? entry.value : parseFloat(entry.value) || 0
           return (
             <p key={index} style={{
               margin: '4px 0',
               color: entry.color,
               fontSize: '13px',
             }}>
-              {entry.name}: {zscore.toFixed(3)} (Rating: {rating.toFixed(0)})
+              {entry.name}: {value >= 0 ? '+' : ''}{(value * 100).toFixed(2)}%
             </p>
           )
         })}
@@ -84,7 +70,7 @@ export default function ScoreChart({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Score Chart</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Cumulative Return Chart</h2>
           <select
             value={metric}
             onChange={(e) => onMetricChange(e.target.value)}
@@ -134,6 +120,7 @@ export default function ScoreChart({
               height={80}
             />
             <YAxis tick={{ fontSize: 12 }} />
+            <ReferenceLine y={0} stroke="#111827" strokeWidth={2} />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Brush dataKey="date" height={20} stroke="#1E3A8A" />
