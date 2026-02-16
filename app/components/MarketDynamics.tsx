@@ -11,15 +11,6 @@ import MarketSummarySection from './market/MarketSummarySection'
 
 const ETF_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLP', 'XLU', 'XLV', 'XLI', 'SMH']
 
-type MetricOption = 'zscore' | 'modified_zscore' | 'iqr' | 'minmax'
-
-const METRIC_OPTIONS: { label: string; value: MetricOption }[] = [
-  { label: 'Z-score', value: 'zscore' },
-  { label: 'Modified Z-score (MAD)', value: 'modified_zscore' },
-  { label: 'IQR Score', value: 'iqr' },
-  { label: 'Min-Max Scaling', value: 'minmax' },
-]
-
 // ETF holdings mapping (simplified - in production, fetch from yfinance)
 const ETF_HOLDINGS: { [key: string]: string[] } = {
   XLF: ['BRK-B', 'JPM', 'BAC', 'C', 'WFC', 'GS', 'MS', 'BLK', 'CME', 'V', 'MA'],
@@ -50,7 +41,6 @@ export default function MarketDynamics() {
   const [normalizationTicker, setNormalizationTicker] = useState<string>('')
   const [selectedETF, setSelectedETF] = useState<string>('')
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
-  const [metric, setMetric] = useState<MetricOption>('zscore')
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [sectorReturns, setSectorReturns] = useState<Record<string, { dailyReturn: number; date: string; price: number }>>({})
@@ -253,7 +243,6 @@ export default function MarketDynamics() {
           startDate,
           endDate,
           timescale: '2Y',
-          metric,
         }),
       })
 
@@ -420,9 +409,6 @@ export default function MarketDynamics() {
 
       <ScoreChart
         chartData={chartData}
-        metric={metric}
-        metricOptions={METRIC_OPTIONS}
-        onMetricChange={(value) => setMetric(value as MetricOption)}
         onDownload={handleDownloadChartData}
         loading={loading}
       />

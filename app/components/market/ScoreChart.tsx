@@ -5,16 +5,8 @@ type ChartDataPoint = {
   [key: string]: string | number
 }
 
-type MetricOption = {
-  label: string
-  value: string
-}
-
 type ScoreChartProps = {
   chartData: ChartDataPoint[]
-  metric: string
-  metricOptions: MetricOption[]
-  onMetricChange: (value: string) => void
   onDownload: () => void
   loading: boolean
 }
@@ -53,9 +45,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function ScoreChart({
   chartData,
-  metric,
-  metricOptions,
-  onMetricChange,
   onDownload,
   loading,
 }: ScoreChartProps) {
@@ -71,23 +60,6 @@ export default function ScoreChart({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Cumulative Return Chart</h2>
-          <select
-            value={metric}
-            onChange={(e) => onMetricChange(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              border: '1px solid #ccc',
-              borderRadius: '8px',
-              fontSize: '12px',
-              backgroundColor: 'white',
-            }}
-          >
-            {metricOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </div>
         <button
           onClick={onDownload}
