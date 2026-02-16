@@ -34,6 +34,8 @@ interface ChartDataPoint {
   [key: string]: string | number
 }
 
+type ChartViewMode = 'absolute' | 'relative'
+
 export default function MarketDynamics() {
   const [tickerList, setTickerList] = useState<string>('')
   const [startDate, setStartDate] = useState<string>('2019-12-31')
@@ -41,6 +43,7 @@ export default function MarketDynamics() {
   const [normalizationTicker, setNormalizationTicker] = useState<string>('')
   const [selectedETF, setSelectedETF] = useState<string>('')
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('absolute')
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [sectorReturns, setSectorReturns] = useState<Record<string, { dailyReturn: number; date: string; price: number }>>({})
@@ -221,8 +224,12 @@ export default function MarketDynamics() {
   }
 
   const handleGenerate = async () => {
-    if (!tickerList || !normalizationTicker || !startDate || !endDate) {
+    if (!tickerList || !startDate || !endDate) {
       setError('Please fill in all required fields')
+      return
+    }
+    if (chartViewMode === 'relative' && !normalizationTicker) {
+      setError('Please provide a normalization ticker for relative view')
       return
     }
 
@@ -231,6 +238,7 @@ export default function MarketDynamics() {
 
     try {
       const tickers = tickerList.split(',').map(t => t.trim()).filter(t => t)
+      const uniqueTickers = Array.from(new Set(tickers))
       
       const response = await fetch('/api/calculate-zscore', {
         method: 'POST',
@@ -238,11 +246,12 @@ export default function MarketDynamics() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tickers: [...tickers, normalizationTicker],
-          normalizationTicker,
+          tickers: uniqueTickers,
+          normalizationTicker: normalizationTicker || null,
           startDate,
           endDate,
           timescale: '2Y',
+          viewMode: chartViewMode,
         }),
       })
 
@@ -409,6 +418,8 @@ export default function MarketDynamics() {
 
       <ScoreChart
         chartData={chartData}
+        viewMode={chartViewMode}
+        onViewModeChange={(value) => setChartViewMode(value as ChartViewMode)}
         onDownload={handleDownloadChartData}
         loading={loading}
       />

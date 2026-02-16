@@ -7,6 +7,8 @@ type ChartDataPoint = {
 
 type ScoreChartProps = {
   chartData: ChartDataPoint[]
+  viewMode: 'absolute' | 'relative'
+  onViewModeChange: (value: string) => void
   onDownload: () => void
   loading: boolean
 }
@@ -45,6 +47,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export default function ScoreChart({
   chartData,
+  viewMode,
+  onViewModeChange,
   onDownload,
   loading,
 }: ScoreChartProps) {
@@ -60,6 +64,20 @@ export default function ScoreChart({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Cumulative Return Chart</h2>
+          <select
+            value={viewMode}
+            onChange={(e) => onViewModeChange(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              fontSize: '12px',
+              backgroundColor: 'white',
+            }}
+          >
+            <option value="absolute">Pure Cumulative Return</option>
+            <option value="relative">Normalized vs Benchmark</option>
+          </select>
         </div>
         <button
           onClick={onDownload}

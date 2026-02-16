@@ -44,13 +44,17 @@ const fetchHistorical = async (ticker: string, startDate: Date, endDate: Date): 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json()
-    const { tickers, normalizationTicker, startDate, endDate, timescale, metric } = body
+    const { tickers, normalizationTicker, startDate, endDate, timescale, viewMode } = body
 
-    if (!tickers || !normalizationTicker || !startDate || !endDate) {
+    if (!tickers || !startDate || !endDate) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
         { status: 400 }
       )
+    }
+    const mode = String(viewMode || 'absolute').toLowerCase()
+    if (mode === 'relative' && !normalizationTicker) {
+      return NextResponse.json({ error: 'Normalization ticker is required for relative view' }, { status: 400 })
     }
 
     const requestedStart = new Date(startDate)
@@ -59,25 +63,27 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
     }
 
-    const normalizedTickers = Array.from(
+    const tickerList = Array.from(
       new Set(
         [
           ...(Array.isArray(tickers) ? tickers : []),
-          normalizationTicker,
         ]
           .map((ticker: string) => String(ticker).trim())
           .filter((ticker: string) => ticker.length > 0)
       )
     )
 
-    if (normalizedTickers.length === 0) {
+    if (tickerList.length === 0) {
       return NextResponse.json({ error: 'No tickers provided' }, { status: 400 })
     }
 
     const fetchStart = new Date(requestedStart)
 
+    const historyTickers = mode === 'relative'
+      ? Array.from(new Set([...tickerList, String(normalizationTicker).trim()]))
+      : tickerList
     const historyResults = await Promise.all(
-      normalizedTickers.map(async (ticker: string) => ({
+      historyTickers.map(async (ticker: string) => ({
         ticker,
         data: await fetchHistorical(ticker, fetchStart, requestedEnd),
       }))
@@ -92,7 +98,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     let dates: string[] = []
     let commonDates: string[] = []
 
-    for (const ticker of normalizedTickers) {
+    for (const ticker of tickerList) {
       const tickerHistory = historyByTicker.get(ticker) || []
       if (tickerHistory.length === 0) {
         continue
@@ -118,7 +124,16 @@ export async function POST(request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Not enough overlapping data to calculate cumulative returns' }, { status: 400 })
     }
 
-    for (const ticker of normalizedTickers) {
+    const normalizationHistory = mode === 'relative'
+      ? historyByTicker.get(String(normalizationTicker).trim()) || []
+      : []
+    const normMap = new Map(normalizationHistory.map((point) => [point.date, point.close]))
+    const baseNorm = mode === 'relative' ? normMap.get(commonDates[0]) : undefined
+    if (mode === 'relative' && (!baseNorm || baseNorm === 0)) {
+      return NextResponse.json({ error: 'Not enough normalization data to calculate relative returns' }, { status: 400 })
+    }
+
+    for (const ticker of tickerList) {
       const tickerHistory = historyByTicker.get(ticker) || []
       if (tickerHistory.length === 0) {
         continue
@@ -136,6 +151,17 @@ export async function POST(request: NextRequest): Promise<Response> {
         const tickerClose = tickerMap.get(date)
         if (!tickerClose) {
           cumulative.push(0)
+          return
+        }
+        if (mode === 'relative') {
+          const normClose = normMap.get(date)
+          if (!normClose || normClose === 0 || !baseNorm) {
+            cumulative.push(0)
+            return
+          }
+          const baseRatio = baseClose / baseNorm
+          const ratio = tickerClose / normClose
+          cumulative.push(ratio / baseRatio - 1)
           return
         }
         cumulative.push(tickerClose / baseClose - 1)
