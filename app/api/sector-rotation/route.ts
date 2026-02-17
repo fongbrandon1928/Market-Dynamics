@@ -21,6 +21,12 @@ const YIELD_TICKERS = {
 
 const CYCLICAL_SECTORS = ['XLK', 'XLI', 'XLF', 'XLE', 'XLY', 'SMH', 'QQQ', 'IWM', 'DIA', 'SPMD']
 const DEFENSIVE_SECTORS = ['XLU', 'XLV', 'XLP']
+const PHASE_GROUPS: Record<string, string[]> = {
+  early: ['XLY', 'XLF', 'XLI', 'XLK'],
+  mid: ['XLE', 'XLB'],
+  late: ['XLV', 'XLP', 'XLU'],
+  recession: ['XLU', 'XLP', 'XLV'],
+}
 
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
 
@@ -126,6 +132,16 @@ const getQuadrant = (rsIndex: number, momentum: number): RrgQuadrant => {
     return 'Improving'
   }
   return 'Lagging'
+}
+
+const computeGroupStrength = (tickers: string[], metrics: Record<string, any>) => {
+  const values = tickers
+    .map((ticker) => metrics[ticker]?.rsIndex)
+    .filter((value) => typeof value === 'number') as number[]
+  if (values.length === 0) {
+    return 0
+  }
+  return mean(values)
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
@@ -291,12 +307,26 @@ export async function GET(request: NextRequest): Promise<Response> {
     const dispersion = maxReturn - minReturn
     const rotationDetected = dispersion >= 0.05 && (riskOff || curveInverted)
 
+    const groupStrength = {
+      early: computeGroupStrength(PHASE_GROUPS.early, sectorMetrics),
+      mid: computeGroupStrength(PHASE_GROUPS.mid, sectorMetrics),
+      late: computeGroupStrength(PHASE_GROUPS.late, sectorMetrics),
+      recession: computeGroupStrength(PHASE_GROUPS.recession, sectorMetrics),
+    }
+    const orderedGroups = Object.entries(groupStrength).sort((a, b) => b[1] - a[1])
+    let cyclePhase = orderedGroups.length ? orderedGroups[0][0] : 'unknown'
+    if (curveInverted || riskOff) {
+      cyclePhase = groupStrength.recession >= groupStrength.late ? 'recession' : 'late'
+    }
+
     return NextResponse.json({
       period,
       periodStart: periodStartKey,
       periodEnd: formatDate(endDate),
       rotationDetected,
       dispersion,
+      cyclePhase,
+      groupStrength,
       technicals: {
         above40,
         below40,

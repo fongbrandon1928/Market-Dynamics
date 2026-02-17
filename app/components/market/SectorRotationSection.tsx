@@ -37,6 +37,8 @@ export default function SectorRotationSection({
   const below40 = Array.isArray(technicals.below40) ? technicals.below40 : []
   const breakAbove40 = Array.isArray(technicals.breakAbove40) ? technicals.breakAbove40 : []
   const breakBelow40 = Array.isArray(technicals.breakBelow40) ? technicals.breakBelow40 : []
+  const cyclePhase = rotationData?.cyclePhase ? String(rotationData.cyclePhase) : 'unknown'
+  const groupStrength = rotationData?.groupStrength || {}
 
   return (
     <div style={{
@@ -100,6 +102,12 @@ export default function SectorRotationSection({
             </div>
             <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
               10Y change: {(((rotationData?.yieldCurve?.rateChange ?? 0) * 100)).toFixed(2)}% | Window: {rotationData?.periodStart} to {rotationData?.periodEnd}
+            </div>
+            <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
+              Cycle phase estimate: {cyclePhase}
+            </div>
+            <div style={{ fontSize: '12px', color: '#374151', marginTop: '4px' }}>
+              Phase strength: early {((groupStrength.early ?? 0)).toFixed(1)} | mid {((groupStrength.mid ?? 0)).toFixed(1)} | late {((groupStrength.late ?? 0)).toFixed(1)} | recession {((groupStrength.recession ?? 0)).toFixed(1)}
             </div>
           </div>
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
