@@ -29,6 +29,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         </p>
         {payload.map((entry: any, index: number) => {
           const value = typeof entry.value === 'number' ? entry.value : parseFloat(entry.value) || 0
+          const price = entry?.payload?.prices?.[entry.name]
           return (
             <p key={index} style={{
               margin: '4px 0',
@@ -36,6 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               fontSize: '13px',
             }}>
               {entry.name}: {value >= 0 ? '+' : ''}{(value * 100).toFixed(2)}%
+              {typeof price === 'number' && price !== 0 ? ` ($${price.toFixed(2)})` : ''}
             </p>
           )
         })}
@@ -115,7 +117,7 @@ export default function ScoreChart({
             <Legend />
             <Brush dataKey="date" height={20} stroke="#1E3A8A" />
             {Object.keys(chartData[0] || {})
-              .filter(key => key !== 'date')
+              .filter(key => key !== 'date' && key !== 'prices')
               .map((ticker, index) => {
                 const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff', '#00ffff', '#ffff00']
                 return (

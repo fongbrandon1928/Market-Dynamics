@@ -95,6 +95,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const zscores: Record<string, number[]> = {}
+    const prices: Record<string, number[]> = {}
     let dates: string[] = []
     let commonDates: string[] = []
 
@@ -147,32 +148,38 @@ export async function POST(request: NextRequest): Promise<Response> {
       }
 
       const cumulative: number[] = []
+      const priceSeries: number[] = []
       commonDates.forEach((date) => {
         const tickerClose = tickerMap.get(date)
         if (!tickerClose) {
           cumulative.push(0)
+          priceSeries.push(0)
           return
         }
         if (mode === 'relative') {
           const normClose = normMap.get(date)
           if (!normClose || normClose === 0 || !baseNorm) {
             cumulative.push(0)
+            priceSeries.push(tickerClose)
             return
           }
           const baseRatio = baseClose / baseNorm
           const ratio = tickerClose / normClose
           cumulative.push(ratio / baseRatio - 1)
+          priceSeries.push(tickerClose)
           return
         }
         cumulative.push(tickerClose / baseClose - 1)
+        priceSeries.push(tickerClose)
       })
 
       zscores[ticker] = cumulative
+      prices[ticker] = priceSeries
     }
 
     dates = commonDates
 
-    return NextResponse.json({ zscores, dates })
+    return NextResponse.json({ zscores, dates, prices })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
