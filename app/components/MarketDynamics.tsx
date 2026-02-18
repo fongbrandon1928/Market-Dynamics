@@ -31,7 +31,7 @@ const ETF_HOLDINGS: { [key: string]: string[] } = {
 
 interface ChartDataPoint {
   date: string
-  [key: string]: string | number | Record<string, number> | undefined
+  [key: string]: string | number | Record<string, number>
   prices?: Record<string, number>
 }
 

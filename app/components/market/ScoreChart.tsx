@@ -2,7 +2,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 type ChartDataPoint = {
   date: string
-  [key: string]: string | number
+  [key: string]: string | number | Record<string, number>
 }
 
 type ScoreChartProps = {
