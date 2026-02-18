@@ -32,7 +32,7 @@ const ETF_HOLDINGS: { [key: string]: string[] } = {
 interface ChartDataPoint {
   date: string
   [key: string]: string | number | Record<string, number>
-  prices?: Record<string, number>
+  prices: Record<string, number>
 }
 
 type ChartViewMode = 'absolute' | 'relative'
@@ -269,8 +269,7 @@ export default function MarketDynamics() {
       
       if (data.zscores && data.dates) {
         data.dates.forEach((date: string, index: number) => {
-          const point: ChartDataPoint = { date }
-          const pricesForDate: Record<string, number> = {}
+          const point: ChartDataPoint = { date, prices: {} }
           tickers.forEach((ticker: string) => {
             if (data.zscores[ticker] && data.zscores[ticker][index] !== undefined) {
               // Round z-score to nearest thousandth (3 decimal places)
@@ -278,12 +277,9 @@ export default function MarketDynamics() {
               point[ticker] = zscore
             }
             if (data.prices?.[ticker] && data.prices[ticker][index] !== undefined) {
-              pricesForDate[ticker] = data.prices[ticker][index]
+              point.prices[ticker] = data.prices[ticker][index]
             }
           })
-          if (Object.keys(pricesForDate).length > 0) {
-            point.prices = pricesForDate
-          }
           chartDataPoints.push(point)
         })
       }
