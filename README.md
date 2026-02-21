@@ -20,6 +20,14 @@ Absolute mode uses the ticker’s own base price instead:
 
 Data source: Yahoo Finance historical daily closes via `yahoo-finance2` for sector ETFs, SPY, and rate proxies (10Y: `^TNX`, 3M: `^IRX`). Weekly values are derived from the last close each week.
 
+Sources used for variable definitions and methodology:
+
+- Fidelity: https://www.fidelity.com/learning-center/trading-investing/markets-sectors/intro-sector-rotation-strats
+- Investing: https://www.investing.com/academy/analysis/how-to-analyze-sector-rotation/
+- NerdWallet: https://www.nerdwallet.com/investing/learn/sector-rotation
+- Yahoo Finance historical prices (via `yahoo-finance2`): https://github.com/gadicc/node-yahoo-finance2
+- CBOE/market yield proxies via Yahoo tickers: `^TNX` (10Y), `^IRX` (3M)
+
 - **Relative Strength (RS) ratio**: `rsRatio_t = sectorClose_t / spyClose_t`
 - **RS Index**: `rsIndex = (rsRatio_last / rsRatio_first) * 100`
 - **RS Momentum**: `rsMomentum = (rsRatio_last / rsRatio_5d) - (rsRatio_last / rsRatio_20d)`

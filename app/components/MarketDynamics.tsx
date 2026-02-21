@@ -8,6 +8,7 @@ import SectorDailyReturnsSection from './market/SectorDailyReturnsSection'
 import SectorRelativeSection from './market/SectorRelativeSection'
 import SectorRotationSection from './market/SectorRotationSection'
 import MarketSummarySection from './market/MarketSummarySection'
+import PerformanceSummarySection from './market/PerformanceSummarySection'
 
 const ETF_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLP', 'XLU', 'XLV', 'XLI', 'SMH']
 
@@ -426,6 +427,14 @@ export default function MarketDynamics() {
         onViewModeChange={(value) => setChartViewMode(value as ChartViewMode)}
         onDownload={handleDownloadChartData}
         loading={loading}
+      />
+
+      <PerformanceSummarySection
+        sectorTickers={ETF_TICKERS}
+        watchListTickers={tickerList.split(',').map((ticker) => ticker.trim()).filter(Boolean)}
+        viewMode={chartViewMode}
+        onViewModeChange={(value) => setChartViewMode(value as ChartViewMode)}
+        normalizationTicker={normalizationTicker}
       />
 
       <SectorDailyReturnsSection
