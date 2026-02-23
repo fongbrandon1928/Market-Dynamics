@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/daily-scan?token=cron",
+      "schedule": "0 21 * * 1-5"
+    }
+  ]
+}
