@@ -79,6 +79,20 @@ export default function PerformanceSummarySection({
     }
 
     const periods = summary?.periods || ['1W', '1M', '1Q']
+    const sortedTickers = [...tickers].sort((a, b) => {
+      const aValue = summary?.tickers?.[a]?.returns?.['1Q']
+      const bValue = summary?.tickers?.[b]?.returns?.['1Q']
+      if (aValue === undefined && bValue === undefined) {
+        return a.localeCompare(b)
+      }
+      if (aValue === undefined) {
+        return 1
+      }
+      if (bValue === undefined) {
+        return -1
+      }
+      return bValue - aValue
+    })
     return (
       <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
         <div style={{ fontWeight: '600', marginBottom: '8px' }}>{title}</div>
@@ -92,7 +106,7 @@ export default function PerformanceSummarySection({
           {periods.map((period) => (
             <div key={period} style={{ color: '#6B7280' }}>{period}</div>
           ))}
-          {tickers.map((ticker) => {
+          {sortedTickers.map((ticker) => {
             const row = summary?.tickers?.[ticker]
             return (
               <Fragment key={ticker}>
