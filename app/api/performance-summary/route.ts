@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import YahooFinance from 'yahoo-finance2'
+import { list } from '@vercel/blob'
 
 export const runtime = 'nodejs'
 const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
@@ -53,12 +54,85 @@ export async function GET(request: NextRequest): Promise<Response> {
     const tickersParam = searchParams.get('tickers')
     const viewMode = String(searchParams.get('viewMode') || 'absolute').toLowerCase()
     const normalizationTicker = searchParams.get('normalizationTicker')
+    const scanDate = searchParams.get('scanDate') || 'live'
     const tickers = tickersParam
       ? tickersParam.split(',').map((ticker) => ticker.trim()).filter(Boolean)
       : []
 
     if (tickers.length === 0) {
       return NextResponse.json({ error: 'Tickers are required' }, { status: 400 })
+    }
+
+    const blobs = await list({ prefix: 'dailyscan-' })
+    const availableScanDates = blobs.blobs
+      .map((blob) => {
+        const match = blob.pathname.match(/^dailyscan-(\d{4}-\d{2}-\d{2})\.json$/)
+        return match ? match[1] : null
+      })
+      .filter((value): value is string => !!value)
+      .sort((a, b) => b.localeCompare(a))
+
+    if (scanDate !== 'live') {
+      if (viewMode === 'relative') {
+        return NextResponse.json(
+          { error: 'Historical scans are stored in absolute mode only', availableScanDates },
+          { status: 400 }
+        )
+      }
+      const targetPath = `dailyscan-${scanDate}.json`
+      const targetBlob = blobs.blobs.find((blob) => blob.pathname === targetPath)
+      if (!targetBlob) {
+        return NextResponse.json(
+          { error: `No historical scan found for ${scanDate}`, availableScanDates },
+          { status: 404 }
+        )
+      }
+
+      const token = process.env.BLOB_READ_WRITE_TOKEN
+      const blobResponse = await fetch(targetBlob.url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!blobResponse.ok) {
+        return NextResponse.json(
+          { error: 'Failed to load historical scan file', availableScanDates },
+          { status: 500 }
+        )
+      }
+      const payload = await blobResponse.json() as {
+        asOf?: string
+        periods?: string[]
+        results?: Record<string, { all?: Array<{ ticker: string; return: number; date: string }> }>
+      }
+      const periods = Array.isArray(payload.periods) && payload.periods.length > 0 ? payload.periods : Object.keys(PERIOD_DAYS)
+      const data: Record<string, { returns: Record<string, number>; lastDate: string }> = {}
+      tickers.forEach((ticker) => {
+        const returns: Record<string, number> = {}
+        let lastDate = payload.asOf || scanDate
+        periods.forEach((period) => {
+          const row = payload.results?.[period]?.all?.find((item) => item.ticker === ticker)
+          if (row) {
+            returns[period] = row.return
+            if (row.date) {
+              lastDate = row.date
+            }
+          }
+        })
+        if (Object.keys(returns).length > 0) {
+          data[ticker] = { returns, lastDate }
+        }
+      })
+
+      return NextResponse.json({
+        tickers: data,
+        periods,
+        asOf: payload.asOf || scanDate,
+        viewMode: 'absolute',
+        normalizationTicker: null,
+        errors: [],
+        source: 'blob',
+        scanDate,
+        availableScanDates,
+      })
     }
 
     const endDate = new Date()
@@ -148,6 +222,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       viewMode,
       normalizationTicker: normalizationTicker || null,
       errors: failures,
+      source: 'live',
+      scanDate: 'live',
+      availableScanDates,
     })
   } catch (error) {
     console.error('Performance summary error:', error)

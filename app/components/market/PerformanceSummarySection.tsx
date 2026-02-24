@@ -12,6 +12,9 @@ type SummaryResponse = {
   tickers: Record<string, { returns: Record<string, number>; lastDate: string }>
   periods: string[]
   asOf: string
+  source?: 'live' | 'blob'
+  scanDate?: string
+  availableScanDates?: string[]
 }
 
 const formatReturn = (value: number): string => {
@@ -32,6 +35,7 @@ export default function PerformanceSummarySection({
   const [summary, setSummary] = useState<SummaryResponse | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
+  const [selectedScanDate, setSelectedScanDate] = useState<string>('live')
 
   const allTickers = normalizeTickers([...sectorTickers, ...watchListTickers])
 
@@ -46,6 +50,7 @@ export default function PerformanceSummarySection({
       const params = new URLSearchParams({
         tickers: allTickers.join(','),
         viewMode,
+        scanDate: selectedScanDate,
       })
       if (viewMode === 'relative' && normalizationTicker) {
         params.set('normalizationTicker', normalizationTicker)
@@ -64,10 +69,16 @@ export default function PerformanceSummarySection({
   }
 
   useEffect(() => {
+    if (selectedScanDate !== 'live' && viewMode === 'relative') {
+      onViewModeChange('absolute')
+    }
+  }, [selectedScanDate, viewMode, onViewModeChange])
+
+  useEffect(() => {
     fetchSummary()
     const intervalId = window.setInterval(fetchSummary, 24 * 60 * 60 * 1000)
     return () => window.clearInterval(intervalId)
-  }, [allTickers.join(','), viewMode, normalizationTicker])
+  }, [allTickers.join(','), viewMode, normalizationTicker, selectedScanDate])
 
   const renderTable = (title: string, tickers: string[]) => {
     if (tickers.length === 0) {
@@ -142,9 +153,26 @@ export default function PerformanceSummarySection({
           <div style={{ fontSize: '12px', color: '#6B7280' }}>
             Auto-refreshes daily while open. Summarizes 1W/1M/1Q returns.
             {summary?.asOf ? ` As of ${summary.asOf}.` : ''}
+            {summary?.source === 'blob' ? ' (Historical snapshot)' : ''}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select
+            value={selectedScanDate}
+            onChange={(e) => setSelectedScanDate(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              fontSize: '12px',
+              backgroundColor: 'white',
+            }}
+          >
+            <option value="live">Live</option>
+            {(summary?.availableScanDates || []).map((date) => (
+              <option key={date} value={date}>{date}</option>
+            ))}
+          </select>
           <select
             value={viewMode}
             onChange={(e) => onViewModeChange(e.target.value)}
@@ -157,7 +185,7 @@ export default function PerformanceSummarySection({
             }}
           >
             <option value="absolute">Pure Cumulative Return</option>
-            <option value="relative">Normalized vs Benchmark</option>
+            <option value="relative" disabled={selectedScanDate !== 'live'}>Normalized vs Benchmark</option>
           </select>
           <button
             onClick={fetchSummary}

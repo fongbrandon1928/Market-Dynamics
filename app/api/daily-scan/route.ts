@@ -5,7 +5,7 @@ import { put } from '@vercel/blob'
 export const runtime = 'nodejs'
 const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
-const SECTOR_TICKERS = ['XLK', 'XLI', 'XLF', 'XLE', 'XLY', 'XLP', 'XLV', 'XLU', 'XLB', 'XLRE', 'SMH', 'IWM', 'DIA', 'SPMD', 'SPY']
+const SECTOR_TICKERS = ['QQQ', 'DIA', 'SPY', 'SPMD', 'IWM', 'XLF', 'XLE', 'XLK', 'XLC', 'XLY', 'XLP', 'XLU', 'XLV', 'XLI', 'XLB', 'XLRE', 'SMH']
 const PERIOD_DAYS: Record<string, number> = {
   '1W': 8,
   '1M': 32,
