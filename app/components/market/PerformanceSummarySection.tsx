@@ -14,6 +14,8 @@ type SummaryResponse = {
   asOf: string
   source?: 'live' | 'blob'
   scanDate?: string
+  compareScanDate?: string | null
+  comparison?: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }>
   availableScanDates?: string[]
 }
 
@@ -36,6 +38,7 @@ export default function PerformanceSummarySection({
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [selectedScanDate, setSelectedScanDate] = useState<string>('live')
+  const [compareScanDate, setCompareScanDate] = useState<string>('')
 
   const allTickers = normalizeTickers([...sectorTickers, ...watchListTickers])
 
@@ -52,6 +55,9 @@ export default function PerformanceSummarySection({
         viewMode,
         scanDate: selectedScanDate,
       })
+      if (compareScanDate) {
+        params.set('compareScanDate', compareScanDate)
+      }
       if (viewMode === 'relative' && normalizationTicker) {
         params.set('normalizationTicker', normalizationTicker)
       }
@@ -75,10 +81,16 @@ export default function PerformanceSummarySection({
   }, [selectedScanDate, viewMode, onViewModeChange])
 
   useEffect(() => {
+    if (compareScanDate === selectedScanDate) {
+      setCompareScanDate('')
+    }
+  }, [compareScanDate, selectedScanDate])
+
+  useEffect(() => {
     fetchSummary()
     const intervalId = window.setInterval(fetchSummary, 24 * 60 * 60 * 1000)
     return () => window.clearInterval(intervalId)
-  }, [allTickers.join(','), viewMode, normalizationTicker, selectedScanDate])
+  }, [allTickers.join(','), viewMode, normalizationTicker, selectedScanDate, compareScanDate])
 
   const renderTable = (title: string, tickers: string[]) => {
     if (tickers.length === 0) {
@@ -125,9 +137,16 @@ export default function PerformanceSummarySection({
                 {periods.map((period) => {
                   const value = row?.returns?.[period]
                   const color = value !== undefined ? (value >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
+                  const delta = summary?.comparison?.[ticker]?.periods?.[period]
+                  const deltaColor = delta !== undefined ? (delta >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
                   return (
                     <div key={`${ticker}-${period}`} style={{ color }}>
                       {value !== undefined ? formatReturn(value) : '—'}
+                      {delta !== undefined ? (
+                        <div style={{ fontSize: '10px', color: deltaColor }}>
+                          Δ {formatReturn(delta)}
+                        </div>
+                      ) : null}
                     </div>
                   )
                 })}
@@ -186,6 +205,24 @@ export default function PerformanceSummarySection({
           >
             <option value="absolute">Pure Cumulative Return</option>
             <option value="relative" disabled={selectedScanDate !== 'live'}>Normalized vs Benchmark</option>
+          </select>
+          <select
+            value={compareScanDate}
+            onChange={(e) => setCompareScanDate(e.target.value)}
+            style={{
+              padding: '6px 10px',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              fontSize: '12px',
+              backgroundColor: 'white',
+            }}
+          >
+            <option value="">No comparison</option>
+            {(summary?.availableScanDates || [])
+              .filter((date) => date !== selectedScanDate)
+              .map((date) => (
+                <option key={date} value={date}>{`Compare vs ${date}`}</option>
+              ))}
           </select>
           <button
             onClick={fetchSummary}

@@ -18,6 +18,13 @@ type HistoricalPoint = {
   close: number
 }
 
+type SummaryData = Record<string, { returns: Record<string, number>; lastDate: string }>
+type ScanPayload = {
+  asOf?: string
+  periods?: string[]
+  results?: Record<string, { all?: Array<{ ticker: string; return: number; date: string }> }>
+}
+
 const fetchSeries = async (ticker: string, startDate: Date, endDate: Date): Promise<HistoricalPoint[]> => {
   const rows = await yahooFinance.historical(ticker, {
     period1: startDate,
@@ -48,6 +55,58 @@ const computeReturn = (series: HistoricalPoint[], startDate: Date): number => {
   return endPoint.close / startPoint.close - 1
 }
 
+const parseScanPayload = (payload: ScanPayload, tickers: string[]) => {
+  const periods = Array.isArray(payload.periods) && payload.periods.length > 0 ? payload.periods : Object.keys(PERIOD_DAYS)
+  const data: SummaryData = {}
+  tickers.forEach((ticker) => {
+    const returns: Record<string, number> = {}
+    let lastDate = payload.asOf || ''
+    periods.forEach((period) => {
+      const row = payload.results?.[period]?.all?.find((item) => item.ticker === ticker)
+      if (row) {
+        returns[period] = row.return
+        if (row.date) {
+          lastDate = row.date
+        }
+      }
+    })
+    if (Object.keys(returns).length > 0) {
+      data[ticker] = { returns, lastDate }
+    }
+  })
+  return { periods, data }
+}
+
+const buildComparison = (
+  currentData: SummaryData,
+  compareData: SummaryData,
+  periods: string[],
+  baseScanDate: string,
+  compareScanDate: string
+) => {
+  const comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
+  Object.keys(currentData).forEach((ticker) => {
+    const current = currentData[ticker]?.returns || {}
+    const baseline = compareData[ticker]?.returns || {}
+    const deltas: Record<string, number> = {}
+    periods.forEach((period) => {
+      const currentValue = current[period]
+      const baselineValue = baseline[period]
+      if (typeof currentValue === 'number' && typeof baselineValue === 'number') {
+        deltas[period] = currentValue - baselineValue
+      }
+    })
+    if (Object.keys(deltas).length > 0) {
+      comparison[ticker] = {
+        periods: deltas,
+        baseScanDate,
+        compareScanDate,
+      }
+    }
+  })
+  return comparison
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -55,6 +114,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const viewMode = String(searchParams.get('viewMode') || 'absolute').toLowerCase()
     const normalizationTicker = searchParams.get('normalizationTicker')
     const scanDate = searchParams.get('scanDate') || 'live'
+    const compareScanDate = searchParams.get('compareScanDate') || ''
     const tickers = tickersParam
       ? tickersParam.split(',').map((ticker) => ticker.trim()).filter(Boolean)
       : []
@@ -98,29 +158,23 @@ export async function GET(request: NextRequest): Promise<Response> {
           { status: 500 }
         )
       }
-      const payload = await blobResponse.json() as {
-        asOf?: string
-        periods?: string[]
-        results?: Record<string, { all?: Array<{ ticker: string; return: number; date: string }> }>
-      }
-      const periods = Array.isArray(payload.periods) && payload.periods.length > 0 ? payload.periods : Object.keys(PERIOD_DAYS)
-      const data: Record<string, { returns: Record<string, number>; lastDate: string }> = {}
-      tickers.forEach((ticker) => {
-        const returns: Record<string, number> = {}
-        let lastDate = payload.asOf || scanDate
-        periods.forEach((period) => {
-          const row = payload.results?.[period]?.all?.find((item) => item.ticker === ticker)
-          if (row) {
-            returns[period] = row.return
-            if (row.date) {
-              lastDate = row.date
-            }
+      const payload = await blobResponse.json() as ScanPayload
+      const { periods, data } = parseScanPayload(payload, tickers)
+      let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
+      if (compareScanDate && compareScanDate !== scanDate) {
+        const comparePath = `dailyscan-${compareScanDate}.json`
+        const compareBlob = blobs.blobs.find((blob) => blob.pathname === comparePath)
+        if (compareBlob) {
+          const compareResponse = await fetch(compareBlob.url, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
+          if (compareResponse.ok) {
+            const comparePayload = await compareResponse.json() as ScanPayload
+            const parsedCompare = parseScanPayload(comparePayload, tickers)
+            comparison = buildComparison(data, parsedCompare.data, periods, scanDate, compareScanDate)
           }
-        })
-        if (Object.keys(returns).length > 0) {
-          data[ticker] = { returns, lastDate }
         }
-      })
+      }
 
       return NextResponse.json({
         tickers: data,
@@ -131,6 +185,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         errors: [],
         source: 'blob',
         scanDate,
+        compareScanDate: compareScanDate || null,
+        comparison,
         availableScanDates,
       })
     }
@@ -215,6 +271,23 @@ export async function GET(request: NextRequest): Promise<Response> {
       data[result.ticker] = { returns, lastDate }
     })
 
+    let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
+    if (compareScanDate && compareScanDate !== 'live') {
+      const comparePath = `dailyscan-${compareScanDate}.json`
+      const compareBlob = blobs.blobs.find((blob) => blob.pathname === comparePath)
+      if (compareBlob) {
+        const token = process.env.BLOB_READ_WRITE_TOKEN
+        const compareResponse = await fetch(compareBlob.url, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (compareResponse.ok) {
+          const comparePayload = await compareResponse.json() as ScanPayload
+          const parsedCompare = parseScanPayload(comparePayload, tickers)
+          comparison = buildComparison(data, parsedCompare.data, Object.keys(PERIOD_DAYS), 'live', compareScanDate)
+        }
+      }
+    }
+
     return NextResponse.json({
       tickers: data,
       periods: Object.keys(PERIOD_DAYS),
@@ -224,6 +297,8 @@ export async function GET(request: NextRequest): Promise<Response> {
       errors: failures,
       source: 'live',
       scanDate: 'live',
+      compareScanDate: compareScanDate || null,
+      comparison,
       availableScanDates,
     })
   } catch (error) {
