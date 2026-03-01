@@ -14,6 +14,11 @@ type SummaryResponse = {
   asOf: string
   source?: 'live'
   compareAsOfDate?: string | null
+  analysis?: {
+    summary: string[]
+    trendFlags: Array<{ ticker: string; signal: string; details: string }>
+    rotationSignals: string[]
+  }
   comparison?: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }>
 }
 
@@ -227,6 +232,34 @@ export default function PerformanceSummarySection({
       {error && (
         <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
           {error}
+        </div>
+      )}
+      {summary?.analysis && (
+        <div style={{ marginBottom: '12px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
+          <div style={{ fontWeight: 600, marginBottom: '6px' }}>Automated Market Summary</div>
+          <div style={{ fontSize: '12px', color: '#111827' }}>
+            {summary.analysis.summary.map((line, index) => (
+              <div key={`summary-${index}`}>- {line}</div>
+            ))}
+          </div>
+          <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px' }}>Trend Flags</div>
+          <div style={{ fontSize: '12px', color: '#111827' }}>
+            {summary.analysis.trendFlags.length === 0 ? (
+              <div>- No major trend flags detected.</div>
+            ) : (
+              summary.analysis.trendFlags.map((flag, index) => (
+                <div key={`flag-${flag.ticker}-${index}`}>
+                  - {flag.ticker}: {flag.signal} ({flag.details})
+                </div>
+              ))
+            )}
+          </div>
+          <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px' }}>Sector Rotation Discovery</div>
+          <div style={{ fontSize: '12px', color: '#111827' }}>
+            {summary.analysis.rotationSignals.map((signal, index) => (
+              <div key={`rotation-${index}`}>- {signal}</div>
+            ))}
+          </div>
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

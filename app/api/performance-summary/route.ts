@@ -18,6 +18,11 @@ type HistoricalPoint = {
 }
 
 type SummaryData = Record<string, { returns: Record<string, number>; lastDate: string }>
+type AnalysisResult = {
+  summary: string[]
+  trendFlags: Array<{ ticker: string; signal: string; details: string }>
+  rotationSignals: string[]
+}
 
 const fetchSeries = async (ticker: string, startDate: Date, endDate: Date): Promise<HistoricalPoint[]> => {
   const rows = await yahooFinance.historical(ticker, {
@@ -58,6 +63,112 @@ const parseDateParam = (value: string | null): Date | null => {
     return null
   }
   return parsed
+}
+
+const average = (values: number[]): number => {
+  if (values.length === 0) {
+    return 0
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
+  const periods = ['1W', '1M', '1Q']
+  const tickers = Object.keys(data)
+  const q1Sorted = tickers
+    .map((ticker) => ({ ticker, value: data[ticker]?.returns?.['1Q'] }))
+    .filter((item): item is { ticker: string; value: number } => typeof item.value === 'number')
+    .sort((a, b) => b.value - a.value)
+  const top3 = q1Sorted.slice(0, 3)
+  const bottom3 = q1Sorted.slice(-3).reverse()
+
+  const spyReturns = data.SPY?.returns
+  const trendFlags: Array<{ ticker: string; signal: string; details: string }> = []
+
+  tickers.forEach((ticker) => {
+    const returns = data[ticker]?.returns
+    if (!returns) {
+      return
+    }
+    const periodValues = periods.map((period) => returns[period]).filter((v): v is number => typeof v === 'number')
+    if (periodValues.length !== periods.length) {
+      return
+    }
+
+    if (spyReturns) {
+      const rel = periods.map((period) => (returns[period] ?? 0) - (spyReturns[period] ?? 0))
+      if (rel.every((value) => value > 0)) {
+        trendFlags.push({
+          ticker,
+          signal: 'Consistent Outperformance',
+          details: `Beating SPY across 1W/1M/1Q by avg ${(average(rel) * 100).toFixed(2)}%.`,
+        })
+      } else if (rel.every((value) => value < 0)) {
+        trendFlags.push({
+          ticker,
+          signal: 'Consistent Underperformance',
+          details: `Lagging SPY across 1W/1M/1Q by avg ${(average(rel) * 100).toFixed(2)}%.`,
+        })
+      }
+    }
+
+    if (returns['1W'] > returns['1M'] && returns['1M'] > returns['1Q']) {
+      trendFlags.push({
+        ticker,
+        signal: 'Momentum Improving',
+        details: `Return ladder improving: 1W > 1M > 1Q.`,
+      })
+    } else if (returns['1W'] < returns['1M'] && returns['1M'] < returns['1Q']) {
+      trendFlags.push({
+        ticker,
+        signal: 'Momentum Deteriorating',
+        details: `Return ladder weakening: 1W < 1M < 1Q.`,
+      })
+    }
+  })
+
+  const rotationSignals: string[] = []
+  const iwm = data.IWM?.returns
+  const qqq = data.QQQ?.returns
+  if (iwm && qqq && typeof iwm['1W'] === 'number' && typeof iwm['1Q'] === 'number' && typeof qqq['1W'] === 'number' && typeof qqq['1Q'] === 'number') {
+    if (iwm['1W'] > qqq['1W'] && iwm['1Q'] < qqq['1Q']) {
+      rotationSignals.push('Small-caps are starting to outperform in the short term (IWM > QQQ on 1W while still trailing on 1Q).')
+    }
+  }
+
+  const cyclical = ['XLK', 'XLI', 'XLF', 'XLY']
+  const defensive = ['XLU', 'XLV', 'XLP']
+  const cyclical1W = average(cyclical.map((ticker) => data[ticker]?.returns?.['1W']).filter((v): v is number => typeof v === 'number'))
+  const cyclical1Q = average(cyclical.map((ticker) => data[ticker]?.returns?.['1Q']).filter((v): v is number => typeof v === 'number'))
+  const defensive1W = average(defensive.map((ticker) => data[ticker]?.returns?.['1W']).filter((v): v is number => typeof v === 'number'))
+  const defensive1Q = average(defensive.map((ticker) => data[ticker]?.returns?.['1Q']).filter((v): v is number => typeof v === 'number'))
+  if (defensive1W > cyclical1W && defensive1Q < cyclical1Q) {
+    rotationSignals.push('Defensive sectors are improving on 1W relative to cyclicals, suggesting an early risk-off rotation.')
+  } else if (cyclical1W > defensive1W && cyclical1Q < defensive1Q) {
+    rotationSignals.push('Cyclicals are improving on 1W relative to defensives, suggesting a possible risk-on rotation.')
+  }
+
+  if (rotationSignals.length === 0) {
+    rotationSignals.push('No strong early sector-rotation trigger detected from current 1W/1M/1Q relationships.')
+  }
+
+  const summary: string[] = []
+  if (top3.length > 0) {
+    summary.push(`Top 1Q leaders: ${top3.map((item) => `${item.ticker} ${item.value >= 0 ? '+' : ''}${(item.value * 100).toFixed(2)}%`).join(', ')}.`)
+  }
+  if (bottom3.length > 0) {
+    summary.push(`Bottom 1Q laggards: ${bottom3.map((item) => `${item.ticker} ${item.value >= 0 ? '+' : ''}${(item.value * 100).toFixed(2)}%`).join(', ')}.`)
+  }
+  if (spyReturns && typeof spyReturns['1Q'] === 'number') {
+    summary.push(`SPY baseline: ${spyReturns['1Q'] >= 0 ? '+' : ''}${(spyReturns['1Q'] * 100).toFixed(2)}% on 1Q.`)
+  }
+  summary.push(`Trend flags raised: ${trendFlags.length}. Rotation signals: ${rotationSignals.length}.`)
+
+  return {
+    summary,
+    trendFlags: trendFlags.slice(0, 12),
+    rotationSignals,
+  }
 }
 
 const buildComparison = (
@@ -207,6 +318,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const summary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, asOfDate)
+    const analysis = buildAutomatedAnalysis(summary.data)
     let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
     if (compareAsOfDate) {
       const compareSummary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, compareAsOfDate)
@@ -227,6 +339,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       normalizationTicker: normalizationTicker || null,
       errors: summary.failures,
       source: 'live',
+      analysis,
       comparison,
       compareAsOfDate: compareAsOfDate ? formatDate(compareAsOfDate) : null,
     })
