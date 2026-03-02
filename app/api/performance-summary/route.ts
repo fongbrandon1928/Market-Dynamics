@@ -73,6 +73,8 @@ const average = (values: number[]): number => {
 }
 
 const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
+  const fmtPct = (value: number) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%`
+  const fmtPp = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}pp`
   const periods = ['1W', '1M', '1Q']
   const tickers = Object.keys(data)
   const q1Sorted = tickers
@@ -119,10 +121,13 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
         details: `Return ladder improving: 1W > 1M > 1Q.`,
       })
     } else if (returns['1W'] < returns['1M'] && returns['1M'] < returns['1Q']) {
+      const shortTermFadePp = (returns['1W'] - returns['1Q']) * 100
+      const oneWeekVsSpyPp = spyReturns ? ((returns['1W'] ?? 0) - (spyReturns['1W'] ?? 0)) * 100 : Number.NaN
+      const oneMonthVsSpyPp = spyReturns ? ((returns['1M'] ?? 0) - (spyReturns['1M'] ?? 0)) * 100 : Number.NaN
       trendFlags.push({
         ticker,
         signal: 'Momentum Deteriorating',
-        details: `Return ladder weakening: 1W < 1M < 1Q.`,
+        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term fade: ${fmtPp(shortTermFadePp)} from 1Q to 1W.${Number.isFinite(oneWeekVsSpyPp) ? ` Vs SPY: 1W ${fmtPp(oneWeekVsSpyPp)}, 1M ${fmtPp(oneMonthVsSpyPp)}.` : ''}`,
       })
     }
   })

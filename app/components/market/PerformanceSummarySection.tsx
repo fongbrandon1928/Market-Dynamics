@@ -247,11 +247,43 @@ export default function PerformanceSummarySection({
             {summary.analysis.trendFlags.length === 0 ? (
               <div>- No major trend flags detected.</div>
             ) : (
-              summary.analysis.trendFlags.map((flag, index) => (
-                <div key={`flag-${flag.ticker}-${index}`}>
-                  - {flag.ticker}: {flag.signal} ({flag.details})
-                </div>
-              ))
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                {summary.analysis.trendFlags.map((flag, index) => {
+                  const isPositive = flag.signal.includes('Outperformance') || flag.signal.includes('Improving')
+                  const isNegative = flag.signal.includes('Underperformance') || flag.signal.includes('Deteriorating')
+                  const badgeBg = isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#E5E7EB'
+                  const badgeColor = isPositive ? '#166534' : isNegative ? '#991B1B' : '#374151'
+                  const cardBorder = isPositive ? '#86EFAC' : isNegative ? '#FCA5A5' : '#D1D5DB'
+                  return (
+                    <div
+                      key={`flag-${flag.ticker}-${index}`}
+                      style={{
+                        border: `1px solid ${cardBorder}`,
+                        borderRadius: '6px',
+                        padding: '8px',
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            backgroundColor: badgeBg,
+                            color: badgeColor,
+                          }}
+                        >
+                          {flag.signal}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#374151' }}>{flag.details}</div>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </div>
           <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px' }}>Sector Rotation Discovery</div>
