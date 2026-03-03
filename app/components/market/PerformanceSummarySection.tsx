@@ -89,6 +89,18 @@ export default function PerformanceSummarySection({
     return () => window.clearInterval(intervalId)
   }, [allTickers.join(','), viewMode, normalizationTicker, selectedDate, compareDate])
 
+  const trendSignals = [
+    'Consistent Outperformance',
+    'Consistent Underperformance',
+    'Momentum Improving',
+    'Momentum Deteriorating',
+  ] as const
+
+  const groupedTrendFlags = trendSignals.map((signal) => ({
+    signal,
+    items: (summary?.analysis?.trendFlags || []).filter((flag) => flag.signal === signal),
+  }))
+
   const renderTable = (title: string, tickers: string[]) => {
     if (tickers.length === 0) {
       return (
@@ -242,44 +254,60 @@ export default function PerformanceSummarySection({
               <div key={`summary-${index}`}>- {line}</div>
             ))}
           </div>
-          <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px' }}>Trend Flags</div>
+          <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            Trend Flags
+            <span
+              title={
+                'Possible outputs:\n' +
+                '- Consistent Outperformance: beats SPY across 1W/1M/1Q\n' +
+                '- Consistent Underperformance: lags SPY across 1W/1M/1Q\n' +
+                '- Momentum Improving: 1W > 1M > 1Q\n' +
+                '- Momentum Deteriorating: 1W < 1M < 1Q'
+              }
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '999px',
+                border: '1px solid #9CA3AF',
+                color: '#4B5563',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'help',
+                userSelect: 'none',
+              }}
+            >
+              ?
+            </span>
+          </div>
           <div style={{ fontSize: '12px', color: '#111827' }}>
             {summary.analysis.trendFlags.length === 0 ? (
               <div>- No major trend flags detected.</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '8px', marginTop: '6px' }}>
-                {summary.analysis.trendFlags.map((flag, index) => {
-                  const isPositive = flag.signal.includes('Outperformance') || flag.signal.includes('Improving')
-                  const isNegative = flag.signal.includes('Underperformance') || flag.signal.includes('Deteriorating')
-                  const badgeBg = isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#E5E7EB'
-                  const badgeColor = isPositive ? '#166534' : isNegative ? '#991B1B' : '#374151'
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(220px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                {groupedTrendFlags.map((group) => {
+                  const isPositive = group.signal.includes('Outperformance') || group.signal.includes('Improving')
+                  const isNegative = group.signal.includes('Underperformance') || group.signal.includes('Deteriorating')
+                  const headerBg = isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#E5E7EB'
+                  const headerColor = isPositive ? '#166534' : isNegative ? '#991B1B' : '#374151'
                   const cardBorder = isPositive ? '#86EFAC' : isNegative ? '#FCA5A5' : '#D1D5DB'
                   return (
-                    <div
-                      key={`flag-${flag.ticker}-${index}`}
-                      style={{
-                        border: `1px solid ${cardBorder}`,
-                        borderRadius: '6px',
-                        padding: '8px',
-                        backgroundColor: '#FFFFFF',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            backgroundColor: badgeBg,
-                            color: badgeColor,
-                          }}
-                        >
-                          {flag.signal}
-                        </span>
+                    <div key={group.signal} style={{ border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '8px', backgroundColor: '#FFFFFF' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, padding: '4px 8px', borderRadius: '999px', backgroundColor: headerBg, color: headerColor, display: 'inline-block', marginBottom: '8px' }}>
+                        {group.signal}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#374151' }}>{flag.details}</div>
+                      {group.items.length === 0 ? (
+                        <div style={{ fontSize: '11px', color: '#6B7280' }}>No tickers</div>
+                      ) : (
+                        group.items.map((flag, index) => (
+                          <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
+                            <div style={{ fontSize: '12px', color: '#374151' }}>{flag.details}</div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   )
                 })}
