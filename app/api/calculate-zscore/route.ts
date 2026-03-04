@@ -110,8 +110,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         .filter((date) => date >= startDate && date <= endDate)
 
       if (tickerDates.length === 0) {
-        continue
-      }
+          continue
+        }
 
       if (commonDates.length === 0) {
         commonDates = [...tickerDates]
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const baseNorm = mode === 'relative' ? normMap.get(commonDates[0]) : undefined
     if (mode === 'relative' && (!baseNorm || baseNorm === 0)) {
       return NextResponse.json({ error: 'Not enough normalization data to calculate relative returns' }, { status: 400 })
-    }
+      }
 
     for (const ticker of tickerList) {
       const tickerHistory = historyByTicker.get(ticker) || []
