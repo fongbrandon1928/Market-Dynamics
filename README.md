@@ -27,6 +27,7 @@ Sources used for variable definitions and methodology:
 - NerdWallet: https://www.nerdwallet.com/investing/learn/sector-rotation
 - Yahoo Finance historical prices (via `yahoo-finance2`): https://github.com/gadicc/node-yahoo-finance2
 - CBOE/market yield proxies via Yahoo tickers: `^TNX` (10Y), `^IRX` (3M)
+- Finage: https://finage.co.uk/blog/top-sector-rotation-indicators-from-index-apis--692f3ba80753ad6e7b45bf1c
 
 - **Relative Strength (RS) ratio**: `rsRatio_t = sectorClose_t / spyClose_t`
 - **RS Index**: `rsIndex = (rsRatio_last / rsRatio_first) * 100`
