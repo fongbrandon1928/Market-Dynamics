@@ -13,9 +13,9 @@ type ApiResponse = {
   }
   relativeStrength: Array<{ ticker: string; rs1m: number; rs1q: number }>
   rankChanges: {
-    fullRankList: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number }>
-    topImprovers: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number }>
-    topDecliners: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number }>
+    fullRankList: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number; currentRs1w: number; previousRs1m: number }>
+    topImprovers: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number; currentRs1w: number; previousRs1m: number }>
+    topDecliners: Array<{ ticker: string; currentRank: number; previousRank: number; shift: number; currentRs1w: number; previousRs1m: number }>
   }
   offenseDefense: {
     offensive1w: number
@@ -111,14 +111,14 @@ export default function RotationIndicatorsLab() {
           <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>2) Rank Change / Leadership Shift</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
-              How calculated: rank each ticker by 1W return and 1M return, then shift = previousRank(1M) - currentRank(1W). Positive shift means improving leadership.
+              How calculated: rank by SPY-relative returns (RS) where RS = ticker return - SPY return. Current rank uses RS(1W), previous rank uses RS(1M), and shift = previousRank - currentRank.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div>
                 <div style={{ fontSize: '12px', marginBottom: '4px' }}>Top Improvers</div>
-                {data.rankChanges.topImprovers.map((row) => <div key={`impr-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: #{row.previousRank} to #{row.currentRank} ({row.shift >= 0 ? '+' : ''}{row.shift})</div>)}
+                {data.rankChanges.topImprovers.map((row) => <div key={`impr-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: #{row.previousRank} to #{row.currentRank} ({row.shift >= 0 ? '+' : ''}{row.shift}) | RS1W {pct(row.currentRs1w)}</div>)}
                 <div style={{ fontSize: '12px', marginTop: '8px', marginBottom: '4px' }}>Top Decliners</div>
-                {data.rankChanges.topDecliners.map((row) => <div key={`decl-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: #{row.previousRank} to #{row.currentRank} ({row.shift >= 0 ? '+' : ''}{row.shift})</div>)}
+                {data.rankChanges.topDecliners.map((row) => <div key={`decl-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: #{row.previousRank} to #{row.currentRank} ({row.shift >= 0 ? '+' : ''}{row.shift}) | RS1W {pct(row.currentRs1w)}</div>)}
               </div>
               <div>
                 <div style={{ fontSize: '12px', marginBottom: '4px' }}>Full Rank List</div>
@@ -126,7 +126,7 @@ export default function RotationIndicatorsLab() {
                   {fullRankList.map((row) => (
                     <div key={`full-${row.ticker}`} style={{ fontSize: '12px', display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                       <span>{row.ticker}</span>
-                      <span>#{row.currentRank} (was #{row.previousRank}, {row.shift >= 0 ? '+' : ''}{row.shift})</span>
+                      <span>#{row.currentRank} (was #{row.previousRank}, {row.shift >= 0 ? '+' : ''}{row.shift}) | RS1W {pct(row.currentRs1w)}</span>
                     </div>
                   ))}
                 </div>

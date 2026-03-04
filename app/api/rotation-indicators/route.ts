@@ -115,6 +115,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         const spy1w = returnOverDays(spySeries, 5)
         const spy1m = returnOverDays(spySeries, 21)
         const spy1q = returnOverDays(spySeries, 63)
+        const rs1w = r1w - spy1w
         const rs1m = r1m - spy1m
         const rs1q = r1q - spy1q
         const accel = r1w - r1m
@@ -140,6 +141,7 @@ export async function GET(request: NextRequest): Promise<Response> {
           r1w,
           r1m,
           r1q,
+          rs1w,
           rs1m,
           rs1q,
           accel,
@@ -152,15 +154,18 @@ export async function GET(request: NextRequest): Promise<Response> {
       })
       .filter((item): item is NonNullable<typeof item> => !!item)
 
-    const rank1w = [...metrics].sort((a, b) => b.r1w - a.r1w)
-    const rank1m = [...metrics].sort((a, b) => b.r1m - a.r1m)
+    const rank1w = [...metrics].sort((a, b) => b.rs1w - a.rs1w)
+    const rank1m = [...metrics].sort((a, b) => b.rs1m - a.rs1m)
     const rankShift = rank1w.map((row, idx) => {
       const monthIdx = rank1m.findIndex((item) => item.ticker === row.ticker)
+      const previous = monthIdx >= 0 ? rank1m[monthIdx] : null
       return {
         ticker: row.ticker,
         currentRank: idx + 1,
         previousRank: monthIdx + 1,
         shift: (monthIdx + 1) - (idx + 1),
+        currentRs1w: row.rs1w,
+        previousRs1m: previous?.rs1m ?? 0,
       }
     })
 
