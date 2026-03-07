@@ -99,17 +99,20 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
 
     if (spyReturns) {
       const rel = periods.map((period) => (returns[period] ?? 0) - (spyReturns[period] ?? 0))
+      const rel1w = rel[0]
+      const rel1m = rel[1]
+      const rel1q = rel[2]
       if (rel.every((value) => value > 0)) {
         trendFlags.push({
           ticker,
           signal: 'Consistent Outperformance',
-          details: `Beating SPY across 1W/1M/1Q by avg ${(average(rel) * 100).toFixed(2)}%.`,
+          details: `Vs SPY: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
         })
       } else if (rel.every((value) => value < 0)) {
         trendFlags.push({
           ticker,
           signal: 'Consistent Underperformance',
-          details: `Lagging SPY across 1W/1M/1Q by avg ${(average(rel) * 100).toFixed(2)}%.`,
+          details: `Vs SPY: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
         })
       }
     }
