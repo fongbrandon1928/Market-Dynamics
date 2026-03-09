@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, ReactNode, useEffect, useState } from 'react'
 
 type PerformanceSummarySectionProps = {
   sectorTickers: string[]
@@ -66,6 +66,39 @@ const formatTrendFlagDetails = (details: string): string => {
   })
 
   return lines.join('\n')
+}
+
+const formatMomentumDeterioratingCompact = (details: string): string => {
+  const normalized = details.replace(/\s+/g, ' ').trim()
+  const sentences = normalized.split(/(?<=\.)\s+/)
+  const returnsSentence = sentences.find((sentence) => /^1W\b/.test(sentence.trim())) || ''
+  const fadeSentence = sentences.find((sentence) => /^Short-term fade:/i.test(sentence.trim())) || ''
+  const vsSentence = sentences.find((sentence) => /^Vs [^:]+:/i.test(sentence.trim())) || ''
+
+  const returnsLine = returnsSentence.replace(/\.$/, '').split(/,\s*/).join(' | ')
+  const fadeLine = fadeSentence.replace(/\.$/, '')
+  const compactVs = vsSentence
+    .replace(/\.$/, '')
+    .replace(/^Vs [^:]+:\s*/i, 'Vs SPY ')
+    .split(/,\s*/)
+    .join(', ')
+
+  return [returnsLine, [fadeLine, compactVs].filter(Boolean).join(' | ')].filter(Boolean).join('\n')
+}
+
+const renderTrendMetricsWithColor = (text: string): ReactNode[] => {
+  const metricPattern = /([+-]\d+(?:\.\d+)?(?:%|pp))/g
+  return text.split(metricPattern).map((part, index) => {
+    if (/^[+-]\d+(?:\.\d+)?(?:%|pp)$/.test(part)) {
+      const isPositive = part.startsWith('+')
+      return (
+        <span key={`metric-${index}`} style={{ color: isPositive ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+          {part}
+        </span>
+      )
+    }
+    return <span key={`text-${index}`}>{part}</span>
+  })
 }
 
 export default function PerformanceSummarySection({
@@ -352,11 +385,20 @@ export default function PerformanceSummarySection({
                         <div style={{ fontSize: '11px', color: '#6B7280' }}>No tickers</div>
                       ) : (
                         group.items.map((flag, index) => {
-                          const stackedDetails = formatTrendFlagDetails(flag.details)
+                          const isMomentumDeteriorating = group.signal === 'Momentum Deteriorating'
+                          const stackedDetails = isMomentumDeteriorating
+                            ? formatMomentumDeterioratingCompact(flag.details)
+                            : formatTrendFlagDetails(flag.details)
                           return (
-                            <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
+                            <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: isMomentumDeteriorating ? '6px' : '8px' }}>
                               <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
-                              <div style={{ fontSize: '12px', color: '#374151', whiteSpace: 'pre-wrap' }}>{stackedDetails}</div>
+                              <div style={{ fontSize: '12px', color: '#374151' }}>
+                                {stackedDetails.split('\n').map((line, lineIndex) => (
+                                  <div key={`line-${lineIndex}`} style={{ whiteSpace: 'pre-wrap' }}>
+                                    {renderTrendMetricsWithColor(line)}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )
                         })
