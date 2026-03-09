@@ -30,6 +30,44 @@ const formatReturn = (value: number): string => {
 const normalizeTickers = (tickers: string[]) =>
   Array.from(new Set(tickers.map((ticker) => ticker.trim()).filter(Boolean)))
 
+const formatTrendFlagDetails = (details: string): string => {
+  const normalized = details.replace(/\s+/g, ' ').trim()
+  const sentences = normalized.split(/(?<=\.)\s+/)
+  const lines: string[] = []
+
+  sentences.forEach((sentence) => {
+    const trimmed = sentence.trim()
+    if (!trimmed) {
+      return
+    }
+
+    const vsMatch = trimmed.match(/^(Vs [^:]+:)\s*(.+)$/i)
+    if (vsMatch) {
+      const [, label, values] = vsMatch
+      lines.push(label)
+      values
+        .replace(/\.$/, '')
+        .split(/,\s*/)
+        .filter(Boolean)
+        .forEach((part) => lines.push(`  ${part.trim()}`))
+      return
+    }
+
+    if (/^1W\b/.test(trimmed) && trimmed.includes(',')) {
+      trimmed
+        .replace(/\.$/, '')
+        .split(/,\s*/)
+        .filter(Boolean)
+        .forEach((part) => lines.push(part.trim()))
+      return
+    }
+
+    lines.push(trimmed)
+  })
+
+  return lines.join('\n')
+}
+
 export default function PerformanceSummarySection({
   sectorTickers,
   watchListTickers,
@@ -259,10 +297,22 @@ export default function PerformanceSummarySection({
             <span
               title={
                 'Possible outputs:\n' +
-                '- Consistent Outperformance: beats SPY across 1W/1M/1Q\n' +
-                '- Consistent Underperformance: lags SPY across 1W/1M/1Q\n' +
-                '- Momentum Improving: 1W > 1M > 1Q\n' +
-                '- Momentum Deteriorating: 1W < 1M < 1Q'
+                '- Consistent Outperformance: beats SPY across:\n' +
+                '  1W\n' +
+                '  1M\n' +
+                '  1Q\n' +
+                '- Consistent Underperformance: lags SPY across:\n' +
+                '  1W\n' +
+                '  1M\n' +
+                '  1Q\n' +
+                '- Momentum Improving:\n' +
+                '  1W\n' +
+                '  1M\n' +
+                '  1Q (1W > 1M > 1Q)\n' +
+                '- Momentum Deteriorating:\n' +
+                '  1W\n' +
+                '  1M\n' +
+                '  1Q (1W < 1M < 1Q)'
               }
               style={{
                 width: '16px',
@@ -301,12 +351,15 @@ export default function PerformanceSummarySection({
                       {group.items.length === 0 ? (
                         <div style={{ fontSize: '11px', color: '#6B7280' }}>No tickers</div>
                       ) : (
-                        group.items.map((flag, index) => (
-                          <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
-                            <div style={{ fontSize: '12px', color: '#374151' }}>{flag.details}</div>
-                          </div>
-                        ))
+                        group.items.map((flag, index) => {
+                          const stackedDetails = formatTrendFlagDetails(flag.details)
+                          return (
+                            <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
+                              <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
+                              <div style={{ fontSize: '12px', color: '#374151', whiteSpace: 'pre-wrap' }}>{stackedDetails}</div>
+                            </div>
+                          )
+                        })
                       )}
                     </div>
                   )
