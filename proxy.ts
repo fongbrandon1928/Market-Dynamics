@@ -1,20 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-const buildNonce = (): string => {
-  const bytes = new Uint8Array(16)
-  crypto.getRandomValues(bytes)
-  let binary = ''
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte)
-  })
-  return btoa(binary)
-}
-
-export function proxy(request: NextRequest) {
-  const nonce = buildNonce()
+export function proxy() {
   const contentSecurityPolicy = [
     "default-src 'self'",
-    `script-src 'nonce-${nonce}' 'strict-dynamic'`,
+    // Next.js app-router pages include framework inline scripts and static chunks.
+    // Use a compatible script policy to avoid blocking hydration/runtime bundles.
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
@@ -26,14 +17,7 @@ export function proxy(request: NextRequest) {
     'upgrade-insecure-requests',
   ].join('; ')
 
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-nonce', nonce)
-
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  const response = NextResponse.next()
 
   response.headers.set('Content-Security-Policy', contentSecurityPolicy)
   ;['x-powered-by', 'server', 'x-aspnet-version', 'x-aspnetmvc-version'].forEach((header) => {
