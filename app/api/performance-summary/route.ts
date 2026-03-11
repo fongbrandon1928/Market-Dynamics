@@ -72,7 +72,11 @@ const average = (values: number[]): number => {
   return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
-const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
+const buildAutomatedAnalysis = (
+  data: SummaryData,
+  benchmarkTicker: string,
+  benchmarkReturns: Record<string, number> | null
+): AnalysisResult => {
   const fmtPct = (value: number) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(2)}%`
   const fmtPp = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}pp`
   const periods = ['1W', '1M', '1Q']
@@ -84,7 +88,8 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
   const top3 = q1Sorted.slice(0, 3)
   const bottom3 = q1Sorted.slice(-3).reverse()
 
-  const spyReturns = data.SPY?.returns
+  const baselineTicker = benchmarkTicker.toUpperCase()
+  const baselineReturns = benchmarkReturns || data[baselineTicker]?.returns
   const trendFlags: Array<{ ticker: string; signal: string; details: string }> = []
 
   tickers.forEach((ticker) => {
@@ -97,8 +102,8 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
       return
     }
 
-    if (spyReturns) {
-      const rel = periods.map((period) => (returns[period] ?? 0) - (spyReturns[period] ?? 0))
+    if (baselineReturns) {
+      const rel = periods.map((period) => (returns[period] ?? 0) - (baselineReturns[period] ?? 0))
       const rel1w = rel[0]
       const rel1m = rel[1]
       const rel1q = rel[2]
@@ -106,13 +111,13 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
         trendFlags.push({
           ticker,
           signal: 'Consistent Outperformance',
-          details: `Vs SPY: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
+          details: `Vs ${baselineTicker}: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
         })
       } else if (rel.every((value) => value < 0)) {
         trendFlags.push({
           ticker,
           signal: 'Consistent Underperformance',
-          details: `Vs SPY: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
+          details: `Vs ${baselineTicker}: 1W ${fmtPp(rel1w * 100)}, 1M ${fmtPp(rel1m * 100)}, 1Q ${fmtPp(rel1q * 100)}.`,
         })
       }
     }
@@ -125,12 +130,12 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
       })
     } else if (returns['1W'] < returns['1M'] && returns['1M'] < returns['1Q']) {
       const shortTermFadePp = (returns['1W'] - returns['1Q']) * 100
-      const oneWeekVsSpyPp = spyReturns ? ((returns['1W'] ?? 0) - (spyReturns['1W'] ?? 0)) * 100 : Number.NaN
-      const oneMonthVsSpyPp = spyReturns ? ((returns['1M'] ?? 0) - (spyReturns['1M'] ?? 0)) * 100 : Number.NaN
+      const oneWeekVsBaselinePp = baselineReturns ? ((returns['1W'] ?? 0) - (baselineReturns['1W'] ?? 0)) * 100 : Number.NaN
+      const oneMonthVsBaselinePp = baselineReturns ? ((returns['1M'] ?? 0) - (baselineReturns['1M'] ?? 0)) * 100 : Number.NaN
       trendFlags.push({
         ticker,
         signal: 'Momentum Deteriorating',
-        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term fade: ${fmtPp(shortTermFadePp)} from 1Q to 1W.${Number.isFinite(oneWeekVsSpyPp) ? ` Vs SPY: 1W ${fmtPp(oneWeekVsSpyPp)}, 1M ${fmtPp(oneMonthVsSpyPp)}.` : ''}`,
+        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term fade: ${fmtPp(shortTermFadePp)} from 1Q to 1W.${Number.isFinite(oneWeekVsBaselinePp) ? ` Vs ${baselineTicker}: 1W ${fmtPp(oneWeekVsBaselinePp)}, 1M ${fmtPp(oneMonthVsBaselinePp)}.` : ''}`,
       })
     }
   })
@@ -167,8 +172,8 @@ const buildAutomatedAnalysis = (data: SummaryData): AnalysisResult => {
   if (bottom3.length > 0) {
     summary.push(`Bottom 1Q laggards: ${bottom3.map((item) => `${item.ticker} ${item.value >= 0 ? '+' : ''}${(item.value * 100).toFixed(2)}%`).join(', ')}.`)
   }
-  if (spyReturns && typeof spyReturns['1Q'] === 'number') {
-    summary.push(`SPY baseline: ${spyReturns['1Q'] >= 0 ? '+' : ''}${(spyReturns['1Q'] * 100).toFixed(2)}% on 1Q.`)
+  if (baselineReturns && typeof baselineReturns['1Q'] === 'number') {
+    summary.push(`${baselineTicker} baseline: ${baselineReturns['1Q'] >= 0 ? '+' : ''}${(baselineReturns['1Q'] * 100).toFixed(2)}% on 1Q.`)
   }
   summary.push(`Trend flags raised: ${trendFlags.length}. Rotation signals: ${rotationSignals.length}.`)
 
@@ -219,7 +224,7 @@ const buildSummaryAtDate = async (
   const startDate = new Date(endDate)
   startDate.setDate(startDate.getDate() - (maxLookback + 5))
 
-  const fetchTickers = viewMode === 'relative' && normalizationTicker
+  const fetchTickers = normalizationTicker
     ? Array.from(new Set([...tickers, normalizationTicker]))
     : tickers
 
@@ -245,6 +250,7 @@ const buildSummaryAtDate = async (
   const failures: string[] = []
   const normalizationSeries = normalizationTicker ? results.find((result) => result.ticker === normalizationTicker)?.series || [] : []
   const normalizationMap = new Map(normalizationSeries.map((point) => [formatDate(point.date), point.close]))
+  let benchmarkReturns: Record<string, number> | null = null
 
   const computeRelativeReturn = (series: HistoricalPoint[], periodStart: Date): number => {
     if (series.length < 2 || normalizationSeries.length < 2) {
@@ -272,6 +278,13 @@ const buildSummaryAtDate = async (
       failures.push(`${result.ticker}: ${result.error}`)
     }
     if (normalizationTicker && result.ticker === normalizationTicker) {
+      const benchmarkPeriodReturns: Record<string, number> = {}
+      Object.entries(PERIOD_DAYS).forEach(([period, days]) => {
+        const periodStart = new Date(endDate)
+        periodStart.setDate(periodStart.getDate() - days)
+        benchmarkPeriodReturns[period] = computeReturn(result.series, periodStart)
+      })
+      benchmarkReturns = benchmarkPeriodReturns
       return
     }
     const series = result.series
@@ -294,6 +307,7 @@ const buildSummaryAtDate = async (
     data,
     failures,
     periods: Object.keys(PERIOD_DAYS),
+    benchmarkReturns,
   }
 }
 
@@ -302,7 +316,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     const searchParams = request.nextUrl.searchParams
     const tickersParam = searchParams.get('tickers')
     const viewMode = String(searchParams.get('viewMode') || 'absolute').toLowerCase()
-    const normalizationTicker = searchParams.get('normalizationTicker')
+    const normalizationTickerRaw = searchParams.get('normalizationTicker')
+    const normalizationTicker = normalizationTickerRaw ? normalizationTickerRaw.trim().toUpperCase() : null
     const asOfDateParam = searchParams.get('asOfDate')
     const compareAsOfDateParam = searchParams.get('compareAsOfDate')
     const tickers = tickersParam
@@ -326,7 +341,8 @@ export async function GET(request: NextRequest): Promise<Response> {
     }
 
     const summary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, asOfDate)
-    const analysis = buildAutomatedAnalysis(summary.data)
+    const analysisBenchmarkTicker = normalizationTicker || 'SPY'
+    const analysis = buildAutomatedAnalysis(summary.data, analysisBenchmarkTicker, summary.benchmarkReturns)
     let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
     if (compareAsOfDate) {
       const compareSummary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, compareAsOfDate)

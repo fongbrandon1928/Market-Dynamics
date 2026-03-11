@@ -12,6 +12,7 @@ type SummaryResponse = {
   tickers: Record<string, { returns: Record<string, number>; lastDate: string }>
   periods: string[]
   asOf: string
+  normalizationTicker?: string | null
   source?: 'live'
   compareAsOfDate?: string | null
   analysis?: {
@@ -79,7 +80,7 @@ const formatMomentumDeterioratingCompact = (details: string): string => {
   const fadeLine = fadeSentence.replace(/\.$/, '')
   const compactVs = vsSentence
     .replace(/\.$/, '')
-    .replace(/^Vs [^:]+:\s*/i, 'Vs SPY ')
+    .replace(/^Vs ([^:]+):\s*/i, 'Vs $1 ')
     .split(/,\s*/)
     .join(', ')
 
@@ -132,7 +133,7 @@ export default function PerformanceSummarySection({
       if (compareDate) {
         params.set('compareAsOfDate', compareDate)
       }
-      if (viewMode === 'relative' && normalizationTicker) {
+      if (normalizationTicker) {
         params.set('normalizationTicker', normalizationTicker)
       }
       const response = await fetch(`/api/performance-summary?${params.toString()}`)
@@ -171,6 +172,7 @@ export default function PerformanceSummarySection({
     signal,
     items: (summary?.analysis?.trendFlags || []).filter((flag) => flag.signal === signal),
   }))
+  const trendBenchmark = (summary?.normalizationTicker || normalizationTicker || 'SPY').toUpperCase()
 
   const renderTable = (title: string, tickers: string[]) => {
     if (tickers.length === 0) {
@@ -330,11 +332,11 @@ export default function PerformanceSummarySection({
             <span
               title={
                 'Possible outputs:\n' +
-                '- Consistent Outperformance: beats SPY across:\n' +
+                `- Consistent Outperformance: beats ${trendBenchmark} across:\n` +
                 '  1W\n' +
                 '  1M\n' +
                 '  1Q\n' +
-                '- Consistent Underperformance: lags SPY across:\n' +
+                `- Consistent Underperformance: lags ${trendBenchmark} across:\n` +
                 '  1W\n' +
                 '  1M\n' +
                 '  1Q\n' +
