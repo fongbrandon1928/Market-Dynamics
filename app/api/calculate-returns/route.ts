@@ -4,25 +4,12 @@ import YahooFinance from 'yahoo-finance2'
 export const runtime = 'nodejs'
 const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] })
 
-const WINDOW_BY_TIMESCALE: Record<string, number> = {
-  '1M': 21,
-  '6M': 126,
-  '1Y': 252,
-  '2Y': 504,
-}
-
 type PricePoint = {
   date: string
   close: number
 }
 
-type ReturnPoint = {
-  date: string
-  value: number
-}
-
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
-
 
 const fetchHistorical = async (ticker: string, startDate: Date, endDate: Date): Promise<PricePoint[]> => {
   const rows = await yahooFinance.historical(ticker, {
@@ -44,7 +31,7 @@ const fetchHistorical = async (ticker: string, startDate: Date, endDate: Date): 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json()
-    const { tickers, normalizationTicker, startDate, endDate, timescale, viewMode } = body
+    const { tickers, normalizationTicker, startDate, endDate, viewMode } = body
 
     if (!tickers || !startDate || !endDate) {
       return NextResponse.json(
@@ -94,7 +81,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       historyByTicker.set(result.ticker, result.data)
     }
 
-    const zscores: Record<string, number[]> = {}
+    const returns: Record<string, number[]> = {}
     const prices: Record<string, number[]> = {}
     let dates: string[] = []
     let commonDates: string[] = []
@@ -110,8 +97,8 @@ export async function POST(request: NextRequest): Promise<Response> {
         .filter((date) => date >= startDate && date <= endDate)
 
       if (tickerDates.length === 0) {
-          continue
-        }
+        continue
+      }
 
       if (commonDates.length === 0) {
         commonDates = [...tickerDates]
@@ -132,7 +119,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     const baseNorm = mode === 'relative' ? normMap.get(commonDates[0]) : undefined
     if (mode === 'relative' && (!baseNorm || baseNorm === 0)) {
       return NextResponse.json({ error: 'Not enough normalization data to calculate relative returns' }, { status: 400 })
-      }
+    }
 
     for (const ticker of tickerList) {
       const tickerHistory = historyByTicker.get(ticker) || []
@@ -173,13 +160,13 @@ export async function POST(request: NextRequest): Promise<Response> {
         priceSeries.push(tickerClose)
       })
 
-      zscores[ticker] = cumulative
+      returns[ticker] = cumulative
       prices[ticker] = priceSeries
     }
 
     dates = commonDates
 
-    return NextResponse.json({ zscores, dates, prices })
+    return NextResponse.json({ returns, dates, prices })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(

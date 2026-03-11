@@ -242,7 +242,7 @@ export default function MarketDynamics() {
       const tickers = tickerList.split(',').map(t => t.trim()).filter(t => t)
       const uniqueTickers = Array.from(new Set(tickers))
       
-      const response = await fetch('/api/calculate-zscore', {
+      const response = await fetch('/api/calculate-returns', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +252,6 @@ export default function MarketDynamics() {
           normalizationTicker: normalizationTicker || null,
           startDate,
           endDate,
-          timescale: '2Y',
           viewMode: chartViewMode,
         }),
       })
@@ -260,7 +259,7 @@ export default function MarketDynamics() {
       const data = await response.json()
 
       if (!response.ok) {
-        const errorMessage = data?.error || 'Failed to calculate Z-scores'
+        const errorMessage = data?.error || 'Failed to calculate cumulative returns'
         const helpMessage = data?.help ? `\n${data.help}` : ''
         throw new Error(`${errorMessage}${helpMessage}`)
       }
@@ -268,14 +267,13 @@ export default function MarketDynamics() {
       // Transform data for chart
       const chartDataPoints: ChartDataPoint[] = []
       
-      if (data.zscores && data.dates) {
+      if (data.returns && data.dates) {
         data.dates.forEach((date: string, index: number) => {
           const point: ChartDataPoint = { date, prices: {} }
           tickers.forEach((ticker: string) => {
-            if (data.zscores[ticker] && data.zscores[ticker][index] !== undefined) {
-              // Round z-score to nearest thousandth (3 decimal places)
-              const zscore = Math.round(data.zscores[ticker][index] * 1000) / 1000
-              point[ticker] = zscore
+            if (data.returns[ticker] && data.returns[ticker][index] !== undefined) {
+              const cumulativeReturn = Math.round(data.returns[ticker][index] * 1000) / 1000
+              point[ticker] = cumulativeReturn
             }
             if (data.prices?.[ticker] && data.prices[ticker][index] !== undefined) {
               point.prices[ticker] = data.prices[ticker][index]

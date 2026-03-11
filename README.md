@@ -1,6 +1,6 @@
 # Market Dynamics
 
-A Next.js application for analyzing market dynamics with Z-score calculations and sector rotation analysis.
+A Next.js application for analyzing market dynamics with cumulative return calculations and sector rotation analysis.
 
 ## Normalization Formula (Relative View)
 

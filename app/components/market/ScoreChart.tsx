@@ -146,7 +146,7 @@ export default function ScoreChart({
           color: '#666',
           fontSize: '16px',
         }}>
-          {loading ? 'Loading chart data...' : 'Click Generate to create Z-score chart'}
+          {loading ? 'Loading chart data...' : 'Click Generate to create cumulative return chart'}
         </div>
       )}
     </div>
