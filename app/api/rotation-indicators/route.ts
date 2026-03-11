@@ -76,6 +76,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const params = request.nextUrl.searchParams
     const toParam = params.get('to')
     const lookbackDays = Number(params.get('lookbackDays') || 180)
+    const benchmarkTicker = String(params.get('benchmark') || 'SPY').trim().toUpperCase()
     const toDate = toParam ? new Date(`${toParam}T23:59:59.999Z`) : new Date()
     if (Number.isNaN(toDate.getTime())) {
       return NextResponse.json({ error: 'Invalid to date' }, { status: 400 })
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const fromDate = new Date(toDate)
     fromDate.setDate(fromDate.getDate() - lookbackDays)
 
-    const tickers = Array.from(new Set([...SECTOR_TICKERS, 'SPY']))
+    const tickers = Array.from(new Set([...SECTOR_TICKERS, benchmarkTicker]))
     const results = await Promise.allSettled(
       tickers.map(async (ticker) => ({ ticker, series: await fetchSeries(ticker, fromDate, toDate) }))
     )
@@ -98,9 +99,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       }
     })
 
-    const spySeries = dataByTicker.get('SPY') || []
-    if (spySeries.length < 2) {
-      return NextResponse.json({ error: 'Not enough SPY data', warnings }, { status: 400 })
+    const benchmarkSeries = dataByTicker.get(benchmarkTicker) || []
+    if (benchmarkSeries.length < 2) {
+      return NextResponse.json({ error: `Not enough ${benchmarkTicker} data`, warnings }, { status: 400 })
     }
 
     const metrics = SECTOR_TICKERS
@@ -112,12 +113,12 @@ export async function GET(request: NextRequest): Promise<Response> {
         const r1w = returnOverDays(series, 5)
         const r1m = returnOverDays(series, 21)
         const r1q = returnOverDays(series, 63)
-        const spy1w = returnOverDays(spySeries, 5)
-        const spy1m = returnOverDays(spySeries, 21)
-        const spy1q = returnOverDays(spySeries, 63)
-        const rs1w = r1w - spy1w
-        const rs1m = r1m - spy1m
-        const rs1q = r1q - spy1q
+        const benchmark1w = returnOverDays(benchmarkSeries, 5)
+        const benchmark1m = returnOverDays(benchmarkSeries, 21)
+        const benchmark1q = returnOverDays(benchmarkSeries, 63)
+        const rs1w = r1w - benchmark1w
+        const rs1m = r1m - benchmark1m
+        const rs1q = r1q - benchmark1q
         const accel = r1w - r1m
         const ma20 = movingAverage(series, 20)
         const ma63 = movingAverage(series, 63)
@@ -219,7 +220,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     return NextResponse.json({
       asOf: formatDate(toDate),
-      benchmark: 'SPY',
+      benchmark: benchmarkTicker,
       warnings,
       trend: { leaders, laggards },
       relativeStrength: [...metrics].sort((a, b) => b.rs1m - a.rs1m).slice(0, 10),
