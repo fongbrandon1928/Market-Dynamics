@@ -96,7 +96,7 @@ export default function RotationIndicatorsLab() {
         </div>
       ) : null}
       {data ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 0.85fr) minmax(560px, 1.15fr)', gap: '12px', alignItems: 'start' }}>
           {(() => {
             const movingAverages = data.movingAverages || {
               leadersBySpread: [],
@@ -107,7 +107,7 @@ export default function RotationIndicatorsLab() {
             const fullRankList = data.rankChanges?.fullRankList || []
             return (
               <>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: '1 / 2' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>1) Relative Performance Trend</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: 1W return = (latest close / close 5 trading days ago) - 1. Leaders are highest 1W returns; laggards are lowest.
@@ -117,7 +117,7 @@ export default function RotationIndicatorsLab() {
             <div style={{ fontSize: '12px', marginTop: '8px', marginBottom: '4px' }}>Laggards (1W)</div>
             {data.trend.laggards.map((row) => <div key={`lag-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.r1w)}</div>)}
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: '2 / 3', gridRow: '1 / span 2' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>2) Rank Change / Leadership Shift</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: rank by {data.benchmark}-relative returns (RS) where RS = ticker return - {data.benchmark} return. Current rank uses RS(1W), previous rank uses RS(1M), and shift = previousRank - currentRank.
@@ -158,7 +158,7 @@ export default function RotationIndicatorsLab() {
               </div>
               <div>
                 <div style={{ fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>Full Rank List</div>
-                <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '6px' }}>
+                <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '6px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 52px 58px 1fr', gap: '6px', fontSize: '11px', color: '#6B7280', borderBottom: '1px solid #E5E7EB', paddingBottom: '4px', marginBottom: '4px' }}>
                     <span>Ticker</span>
                     <span>Now</span>
@@ -181,7 +181,7 @@ export default function RotationIndicatorsLab() {
               </div>
             </div>
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: '1 / 2' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>3) Offense vs Defensive + Relative Strength</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: offense/defensive returns are group averages. Spread = offense average - defensive average. Relative strength = sector return - {data.benchmark} return for the same window.
@@ -194,7 +194,7 @@ export default function RotationIndicatorsLab() {
             <div style={{ fontSize: '12px', marginTop: '8px' }}>Top RS (1M vs {data.benchmark})</div>
             {data.relativeStrength.slice(0, 5).map((row) => <div key={`rs-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.rs1m)}</div>)}
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: '1 / 2' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>4) Momentum + Dispersion</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: acceleration = 1W return - 1M return (positive means momentum is improving). Dispersion = top 1W return - bottom 1W return.
@@ -203,7 +203,7 @@ export default function RotationIndicatorsLab() {
             <div style={{ fontSize: '12px', marginTop: '8px' }}>Strongest acceleration</div>
             {data.momentum.strongestAcceleration.map((row) => <div key={`momup-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.accel)}</div>)}
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: '2 / 3' }}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>5) Moving Averages (20D vs 3M)</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: 20D MA = average close of last 20 sessions; 3M MA = average close of last 63 sessions. Spread = (20D MA / 3M MA) - 1.
