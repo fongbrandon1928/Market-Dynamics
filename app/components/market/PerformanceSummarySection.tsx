@@ -45,21 +45,22 @@ const formatTrendFlagDetails = (details: string): string => {
     const vsMatch = trimmed.match(/^(Vs [^:]+:)\s*(.+)$/i)
     if (vsMatch) {
       const [, label, values] = vsMatch
-      lines.push(label)
-      values
+      const periodParts = values
         .replace(/\.$/, '')
         .split(/,\s*/)
         .filter(Boolean)
-        .forEach((part) => lines.push(`  ${part.trim()}`))
+        .map((part) => part.trim())
+      lines.push(`${label} ${periodParts.join(' | ')}`.trim())
       return
     }
 
     if (/^1W\b/.test(trimmed) && trimmed.includes(',')) {
-      trimmed
+      const periodParts = trimmed
         .replace(/\.$/, '')
         .split(/,\s*/)
         .filter(Boolean)
-        .forEach((part) => lines.push(part.trim()))
+        .map((part) => part.trim())
+      lines.push(periodParts.join(' | '))
       return
     }
 
@@ -67,24 +68,6 @@ const formatTrendFlagDetails = (details: string): string => {
   })
 
   return lines.join('\n')
-}
-
-const formatMomentumDeterioratingCompact = (details: string): string => {
-  const normalized = details.replace(/\s+/g, ' ').trim()
-  const sentences = normalized.split(/(?<=\.)\s+/)
-  const returnsSentence = sentences.find((sentence) => /^1W\b/.test(sentence.trim())) || ''
-  const fadeSentence = sentences.find((sentence) => /^Short-term fade:/i.test(sentence.trim())) || ''
-  const vsSentence = sentences.find((sentence) => /^Vs [^:]+:/i.test(sentence.trim())) || ''
-
-  const returnsLine = returnsSentence.replace(/\.$/, '').split(/,\s*/).join(' | ')
-  const fadeLine = fadeSentence.replace(/\.$/, '')
-  const compactVs = vsSentence
-    .replace(/\.$/, '')
-    .replace(/^Vs ([^:]+):\s*/i, 'Vs $1 ')
-    .split(/,\s*/)
-    .join(', ')
-
-  return [returnsLine, [fadeLine, compactVs].filter(Boolean).join(' | ')].filter(Boolean).join('\n')
 }
 
 const renderTrendMetricsWithColor = (text: string): ReactNode[] => {
@@ -367,6 +350,25 @@ export default function PerformanceSummarySection({
               ?
             </span>
           </div>
+          <div
+            style={{
+              marginTop: '6px',
+              marginBottom: '8px',
+              border: '1px solid #D1D5DB',
+              borderRadius: '6px',
+              backgroundColor: '#F9FAFB',
+              padding: '8px',
+              fontSize: '11px',
+              color: '#374151',
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: '4px' }}>How momentum is calculated</div>
+            <div>- Momentum Improving: <span style={{ fontFamily: 'monospace' }}>1W &gt; 1M &gt; 1Q</span></div>
+            <div>- Momentum Deteriorating: <span style={{ fontFamily: 'monospace' }}>1W &lt; 1M &lt; 1Q</span></div>
+            <div>- Short-term acceleration/fade (pp): <span style={{ fontFamily: 'monospace' }}>(1W - 1Q) x 100</span></div>
+            <div>- Vs benchmark values show excess return vs selected normalization ticker.</div>
+          </div>
           <div style={{ fontSize: '12px', color: '#111827' }}>
             {summary.analysis.trendFlags.length === 0 ? (
               <div>- No major trend flags detected.</div>
@@ -387,12 +389,9 @@ export default function PerformanceSummarySection({
                         <div style={{ fontSize: '11px', color: '#6B7280' }}>No tickers</div>
                       ) : (
                         group.items.map((flag, index) => {
-                          const isMomentumDeteriorating = group.signal === 'Momentum Deteriorating'
-                          const stackedDetails = isMomentumDeteriorating
-                            ? formatMomentumDeterioratingCompact(flag.details)
-                            : formatTrendFlagDetails(flag.details)
+                          const stackedDetails = formatTrendFlagDetails(flag.details)
                           return (
-                            <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: isMomentumDeteriorating ? '6px' : '8px' }}>
+                            <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
                               <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
                               <div style={{ fontSize: '12px', color: '#374151' }}>
                                 {stackedDetails.split('\n').map((line, lineIndex) => (

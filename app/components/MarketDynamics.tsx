@@ -5,8 +5,6 @@ import { format } from 'date-fns'
 import ControlsPanel from './market/ControlsPanel'
 import ScoreChart from './market/ScoreChart'
 import SectorDailyReturnsSection from './market/SectorDailyReturnsSection'
-import SectorRelativeSection from './market/SectorRelativeSection'
-import SectorRotationSection from './market/SectorRotationSection'
 import MarketSummarySection from './market/MarketSummarySection'
 import PerformanceSummarySection from './market/PerformanceSummarySection'
 
@@ -52,15 +50,9 @@ export default function MarketDynamics() {
   const [sectorLoading, setSectorLoading] = useState<boolean>(false)
   const [sectorError, setSectorError] = useState<string>('')
   const [sectorPeriod, setSectorPeriod] = useState<string>('1D')
-  const [sectorRelative, setSectorRelative] = useState<Record<string, { value: number; change: number; date: string; baseDate: string }>>({})
-  const [sectorRelativeLoading, setSectorRelativeLoading] = useState<boolean>(false)
-  const [sectorRelativeError, setSectorRelativeError] = useState<string>('')
   const [marketSummary, setMarketSummary] = useState<string>('')
   const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
   const [marketSummaryError, setMarketSummaryError] = useState<string>('')
-  const [sectorRotation, setSectorRotation] = useState<any>(null)
-  const [sectorRotationLoading, setSectorRotationLoading] = useState<boolean>(false)
-  const [sectorRotationError, setSectorRotationError] = useState<string>('')
 
   useEffect(() => {
     // Set default end date to today
@@ -116,83 +108,6 @@ export default function MarketDynamics() {
 
     fetchSectorReturns()
     const intervalId = window.setInterval(fetchSectorReturns, 60000)
-    return () => window.clearInterval(intervalId)
-  }, [sectorPeriod])
-
-  useEffect(() => {
-    const fetchSectorRelative = async () => {
-      setSectorRelativeLoading(true)
-      setSectorRelativeError('')
-      try {
-        const results = await Promise.allSettled(
-          ETF_TICKERS.map(async (ticker) => {
-            const response = await fetch(`/api/sector-relative?ticker=${ticker}&period=${sectorPeriod}`)
-            const data = await response.json()
-            if (!response.ok) {
-              throw new Error(data?.error || `Failed to fetch ${ticker}`)
-            }
-            return {
-              ticker,
-              value: data.value as number,
-              change: data.change as number,
-              date: data.date as string,
-              baseDate: data.baseDate as string,
-            }
-          })
-        )
-
-        const nextRelative: Record<string, { value: number; change: number; date: string; baseDate: string }> = {}
-        const failures: string[] = []
-
-        results.forEach((result) => {
-          if (result.status === 'fulfilled') {
-            nextRelative[result.value.ticker] = {
-              value: result.value.value,
-              change: result.value.change,
-              date: result.value.date,
-              baseDate: result.value.baseDate,
-            }
-          } else {
-            failures.push(result.reason instanceof Error ? result.reason.message : String(result.reason))
-          }
-        })
-
-        setSectorRelative(nextRelative)
-        if (failures.length > 0 && Object.keys(nextRelative).length === 0) {
-          setSectorRelativeError(failures[0])
-        }
-      } catch (err) {
-        setSectorRelativeError(err instanceof Error ? err.message : 'Failed to fetch relative prices')
-      } finally {
-        setSectorRelativeLoading(false)
-      }
-    }
-
-    fetchSectorRelative()
-    const intervalId = window.setInterval(fetchSectorRelative, 60000)
-    return () => window.clearInterval(intervalId)
-  }, [sectorPeriod])
-
-  useEffect(() => {
-    const fetchSectorRotation = async () => {
-      setSectorRotationLoading(true)
-      setSectorRotationError('')
-      try {
-        const response = await fetch(`/api/sector-rotation?period=${sectorPeriod}&tickers=${ETF_TICKERS.join(',')}`)
-        const data = await response.json()
-        if (!response.ok) {
-          throw new Error(data?.error || 'Failed to fetch sector rotation')
-        }
-        setSectorRotation(data)
-      } catch (err) {
-        setSectorRotationError(err instanceof Error ? err.message : 'Failed to fetch sector rotation')
-      } finally {
-        setSectorRotationLoading(false)
-      }
-    }
-
-    fetchSectorRotation()
-    const intervalId = window.setInterval(fetchSectorRotation, 60000)
     return () => window.clearInterval(intervalId)
   }, [sectorPeriod])
 
@@ -306,18 +221,7 @@ export default function MarketDynamics() {
         return `${ticker}: ${(data.dailyReturn * 100).toFixed(2)}% (${data.date})`
       }).join(', ')
 
-      const rotationSnapshot = sectorRotation
-        ? JSON.stringify({
-          rotationDetected: sectorRotation.rotationDetected,
-          dispersion: sectorRotation.dispersion,
-          offenseDefensive: sectorRotation.offenseDefensive,
-          yieldCurve: sectorRotation.yieldCurve,
-          period: sectorRotation.period,
-          periodStart: sectorRotation.periodStart,
-          periodEnd: sectorRotation.periodEnd,
-          sectors: sectorRotation.sectors,
-        })
-        : ''
+      const rotationSnapshot = ''
 
       const response = await fetch('/api/market-summary', {
         method: 'POST',
@@ -389,22 +293,32 @@ export default function MarketDynamics() {
         Market Dynamics
       </h1>
 
-      <ControlsPanel
-        tickerList={tickerList}
-        onTickerListChange={setTickerList}
-        startDate={startDate}
-        onStartDateChange={setStartDate}
-        endDate={endDate}
-        onEndDateChange={setEndDate}
-        normalizationTicker={normalizationTicker}
-        onNormalizationTickerChange={setNormalizationTicker}
-        selectedETF={selectedETF}
-        onETFChange={handleETFChange}
-        etfTickers={ETF_TICKERS}
-        onGenerate={handleGenerate}
-        onSectorRotation={handleSectorRotation}
-        loading={loading}
-      />
+      <div style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '20px', alignItems: 'stretch', marginBottom: '20px' }}>
+        <ControlsPanel
+          tickerList={tickerList}
+          onTickerListChange={setTickerList}
+          startDate={startDate}
+          onStartDateChange={setStartDate}
+          endDate={endDate}
+          onEndDateChange={setEndDate}
+          normalizationTicker={normalizationTicker}
+          onNormalizationTickerChange={setNormalizationTicker}
+          selectedETF={selectedETF}
+          onETFChange={handleETFChange}
+          etfTickers={ETF_TICKERS}
+          onGenerate={handleGenerate}
+          onSectorRotation={handleSectorRotation}
+          loading={loading}
+        />
+
+        <ScoreChart
+          chartData={chartData}
+          viewMode={chartViewMode}
+          onViewModeChange={(value) => setChartViewMode(value as ChartViewMode)}
+          onDownload={handleDownloadChartData}
+          loading={loading}
+        />
+      </div>
 
       {/* Error Message */}
       {error && (
@@ -418,14 +332,6 @@ export default function MarketDynamics() {
           {error}
         </div>
       )}
-
-      <ScoreChart
-        chartData={chartData}
-        viewMode={chartViewMode}
-        onViewModeChange={(value) => setChartViewMode(value as ChartViewMode)}
-        onDownload={handleDownloadChartData}
-        loading={loading}
-      />
 
       <PerformanceSummarySection
         sectorTickers={ETF_TICKERS}
@@ -442,20 +348,6 @@ export default function MarketDynamics() {
         sectorError={sectorError}
         sectorPeriod={sectorPeriod}
         onSectorPeriodChange={setSectorPeriod}
-      />
-
-      <SectorRelativeSection
-        etfTickers={ETF_TICKERS}
-        sectorRelative={sectorRelative}
-        sectorRelativeLoading={sectorRelativeLoading}
-        sectorRelativeError={sectorRelativeError}
-      />
-
-      <SectorRotationSection
-        rotationData={sectorRotation}
-        sectorLoading={sectorRotationLoading}
-        sectorError={sectorRotationError}
-        sectorPeriod={sectorPeriod}
       />
 
       <MarketSummarySection

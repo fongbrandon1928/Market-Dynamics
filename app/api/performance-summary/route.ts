@@ -74,6 +74,7 @@ const average = (values: number[]): number => {
 
 const buildAutomatedAnalysis = (
   data: SummaryData,
+  viewMode: string,
   benchmarkTicker: string,
   benchmarkReturns: Record<string, number> | null
 ): AnalysisResult => {
@@ -91,6 +92,7 @@ const buildAutomatedAnalysis = (
   const baselineTicker = benchmarkTicker.toUpperCase()
   const baselineReturns = benchmarkReturns || data[baselineTicker]?.returns
   const trendFlags: Array<{ ticker: string; signal: string; details: string }> = []
+  const isRelativeMode = viewMode === 'relative'
 
   tickers.forEach((ticker) => {
     const returns = data[ticker]?.returns
@@ -102,8 +104,18 @@ const buildAutomatedAnalysis = (
       return
     }
 
-    if (baselineReturns) {
-      const rel = periods.map((period) => (returns[period] ?? 0) - (baselineReturns[period] ?? 0))
+    // In relative mode, returns are already benchmark-relative, so 0 is the baseline.
+    // In absolute mode, convert to benchmark-relative by subtracting benchmark returns.
+    const rel = periods.map((period) => {
+      if (isRelativeMode) {
+        return returns[period] ?? 0
+      }
+      if (!baselineReturns) {
+        return Number.NaN
+      }
+      return (returns[period] ?? 0) - (baselineReturns[period] ?? 0)
+    })
+    if (rel.every((value) => Number.isFinite(value))) {
       const rel1w = rel[0]
       const rel1m = rel[1]
       const rel1q = rel[2]
@@ -123,19 +135,22 @@ const buildAutomatedAnalysis = (
     }
 
     if (returns['1W'] > returns['1M'] && returns['1M'] > returns['1Q']) {
+      const shortTermAccelerationPp = (returns['1W'] - returns['1Q']) * 100
+      const oneWeekVsBaselinePp = rel[0] * 100
+      const oneMonthVsBaselinePp = rel[1] * 100
       trendFlags.push({
         ticker,
         signal: 'Momentum Improving',
-        details: `Return ladder improving: 1W > 1M > 1Q.`,
+        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term acceleration: ${fmtPp(shortTermAccelerationPp)} from 1Q to 1W.${Number.isFinite(oneWeekVsBaselinePp) && Number.isFinite(oneMonthVsBaselinePp) ? ` Vs ${baselineTicker}: 1W ${fmtPp(oneWeekVsBaselinePp)}, 1M ${fmtPp(oneMonthVsBaselinePp)}.` : ''}`,
       })
     } else if (returns['1W'] < returns['1M'] && returns['1M'] < returns['1Q']) {
       const shortTermFadePp = (returns['1W'] - returns['1Q']) * 100
-      const oneWeekVsBaselinePp = baselineReturns ? ((returns['1W'] ?? 0) - (baselineReturns['1W'] ?? 0)) * 100 : Number.NaN
-      const oneMonthVsBaselinePp = baselineReturns ? ((returns['1M'] ?? 0) - (baselineReturns['1M'] ?? 0)) * 100 : Number.NaN
+      const oneWeekVsBaselinePp = rel[0] * 100
+      const oneMonthVsBaselinePp = rel[1] * 100
       trendFlags.push({
         ticker,
         signal: 'Momentum Deteriorating',
-        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term fade: ${fmtPp(shortTermFadePp)} from 1Q to 1W.${Number.isFinite(oneWeekVsBaselinePp) ? ` Vs ${baselineTicker}: 1W ${fmtPp(oneWeekVsBaselinePp)}, 1M ${fmtPp(oneMonthVsBaselinePp)}.` : ''}`,
+        details: `1W ${fmtPct(returns['1W'])}, 1M ${fmtPct(returns['1M'])}, 1Q ${fmtPct(returns['1Q'])}. Short-term fade: ${fmtPp(shortTermFadePp)} from 1Q to 1W.${Number.isFinite(oneWeekVsBaselinePp) && Number.isFinite(oneMonthVsBaselinePp) ? ` Vs ${baselineTicker}: 1W ${fmtPp(oneWeekVsBaselinePp)}, 1M ${fmtPp(oneMonthVsBaselinePp)}.` : ''}`,
       })
     }
   })
@@ -342,7 +357,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const summary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, asOfDate)
     const analysisBenchmarkTicker = normalizationTicker || 'SPY'
-    const analysis = buildAutomatedAnalysis(summary.data, analysisBenchmarkTicker, summary.benchmarkReturns)
+    const analysis = buildAutomatedAnalysis(summary.data, viewMode, analysisBenchmarkTicker, summary.benchmarkReturns)
     let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
     if (compareAsOfDate) {
       const compareSummary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, compareAsOfDate)
