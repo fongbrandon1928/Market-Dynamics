@@ -53,7 +53,7 @@ export default function ControlsPanel({
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
         <div>
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Start Date</label>
           <input

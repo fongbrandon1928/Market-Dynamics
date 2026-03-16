@@ -31,7 +31,7 @@ export default function SectorDailyReturnsSection({
       borderRadius: '8px',
       padding: '16px',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
           Sector Period Return{headerDate ? ` (${headerDate})` : ''}
         </h2>
@@ -39,7 +39,7 @@ export default function SectorDailyReturnsSection({
           <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
         <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>Timeframe</label>
         <select
           value={sectorPeriod}

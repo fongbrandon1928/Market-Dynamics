@@ -97,6 +97,8 @@ export default function PerformanceSummarySection({
   const [error, setError] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10))
   const [compareDate, setCompareDate] = useState<string>('')
+  const [isMobile, setIsMobile] = useState<boolean>(false)
+  const [isNarrowPhone, setIsNarrowPhone] = useState<boolean>(false)
 
   const allTickers = normalizeTickers([...sectorTickers, ...watchListTickers])
 
@@ -144,6 +146,22 @@ export default function PerformanceSummarySection({
     return () => window.clearInterval(intervalId)
   }, [allTickers.join(','), viewMode, normalizationTicker, selectedDate, compareDate])
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1024px)')
+    const updateLayout = () => setIsMobile(mediaQuery.matches)
+    updateLayout()
+    mediaQuery.addEventListener('change', updateLayout)
+    return () => mediaQuery.removeEventListener('change', updateLayout)
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 415px)')
+    const updateLayout = () => setIsNarrowPhone(mediaQuery.matches)
+    updateLayout()
+    mediaQuery.addEventListener('change', updateLayout)
+    return () => mediaQuery.removeEventListener('change', updateLayout)
+  }, [])
+
   const trendSignals = [
     'Consistent Outperformance',
     'Consistent Underperformance',
@@ -189,7 +207,8 @@ export default function PerformanceSummarySection({
             Benchmark: {normalizationTicker}
           </div>
         ) : null}
-        <div style={{ display: 'grid', gridTemplateColumns: `120px repeat(${periods.length}, 1fr)`, gap: '6px', fontSize: '12px' }}>
+        <div style={{ overflowX: 'auto', maxWidth: '100%', paddingBottom: '2px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `${isNarrowPhone ? 96 : 120}px repeat(${periods.length}, minmax(${isNarrowPhone ? 64 : 72}px, 1fr))`, gap: '6px', fontSize: '12px', minWidth: `${(isNarrowPhone ? 96 : 120) + periods.length * (isNarrowPhone ? 68 : 78)}px`, width: 'max-content' }}>
           <div style={{ color: '#6B7280' }}>Ticker</div>
           {periods.map((period) => (
             <div key={period} style={{ color: '#6B7280' }}>{period}</div>
@@ -218,6 +237,7 @@ export default function PerformanceSummarySection({
               </Fragment>
             )
           })}
+          </div>
         </div>
       </div>
     )
@@ -231,7 +251,7 @@ export default function PerformanceSummarySection({
       borderRadius: '8px',
       padding: '16px',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Performance Summary</h2>
           <div style={{ fontSize: '12px', color: '#6B7280' }}>
@@ -239,7 +259,7 @@ export default function PerformanceSummarySection({
             {summary?.asOf ? ` As of ${summary.asOf}.` : ''}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="date"
             value={selectedDate}
@@ -373,7 +393,7 @@ export default function PerformanceSummarySection({
             {summary.analysis.trendFlags.length === 0 ? (
               <div>- No major trend flags detected.</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(220px, 1fr))', gap: '8px', marginTop: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px', marginTop: '6px' }}>
                 {groupedTrendFlags.map((group) => {
                   const isPositive = group.signal.includes('Outperformance') || group.signal.includes('Improving')
                   const isNegative = group.signal.includes('Underperformance') || group.signal.includes('Deteriorating')
@@ -418,7 +438,7 @@ export default function PerformanceSummarySection({
           </div>
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isNarrowPhone ? '1fr' : 'repeat(auto-fit, minmax(420px, 1fr))', gap: '12px' }}>
         {renderTable('Sector Watch (Broad Market)', sectorTickers)}
         {renderTable('Interest Watch List', watchListTickers)}
       </div>

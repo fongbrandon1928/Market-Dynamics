@@ -64,9 +64,9 @@ export default function ScoreChart({
       minHeight: '500px',
       position: 'relative',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600' }}>Cumulative Return Chart</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Cumulative Return Chart</h2>
           <select
             value={viewMode}
             onChange={(e) => onViewModeChange(e.target.value)}
@@ -95,6 +95,7 @@ export default function ScoreChart({
             fontWeight: '500',
             cursor: chartData.length === 0 ? 'not-allowed' : 'pointer',
             opacity: chartData.length === 0 ? 0.5 : 1,
+            maxWidth: '100%',
           }}
         >
           Download Chart Data

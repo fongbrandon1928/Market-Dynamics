@@ -53,10 +53,19 @@ export default function MarketDynamics() {
   const [marketSummary, setMarketSummary] = useState<string>('')
   const [marketSummaryLoading, setMarketSummaryLoading] = useState<boolean>(false)
   const [marketSummaryError, setMarketSummaryError] = useState<string>('')
+  const [isMobile, setIsMobile] = useState<boolean>(false)
 
   useEffect(() => {
     // Set default end date to today
     setEndDate(format(new Date(), 'yyyy-MM-dd'))
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1024px)')
+    const updateLayout = () => setIsMobile(mediaQuery.matches)
+    updateLayout()
+    mediaQuery.addEventListener('change', updateLayout)
+    return () => mediaQuery.removeEventListener('change', updateLayout)
   }, [])
 
   useEffect(() => {
@@ -288,12 +297,12 @@ export default function MarketDynamics() {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '30px', fontSize: '32px', fontWeight: 'bold' }}>
+    <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px', fontSize: isMobile ? '26px' : '32px', fontWeight: 'bold' }}>
         Market Dynamics
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px minmax(0, 1fr)', gap: '20px', alignItems: 'stretch', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '320px minmax(0, 1fr)', gap: '20px', alignItems: 'stretch', marginBottom: '20px' }}>
         <ControlsPanel
           tickerList={tickerList}
           onTickerListChange={setTickerList}

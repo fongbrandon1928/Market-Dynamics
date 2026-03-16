@@ -11,7 +11,7 @@ export default function Home() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', paddingTop: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', paddingTop: '16px', flexWrap: 'wrap', paddingInline: '12px' }}>
         <button
           onClick={() => setTab('market')}
           style={{
