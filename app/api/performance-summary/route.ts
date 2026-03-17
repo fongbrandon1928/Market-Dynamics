@@ -25,21 +25,35 @@ type AnalysisResult = {
 }
 
 const fetchSeries = async (ticker: string, startDate: Date, endDate: Date): Promise<HistoricalPoint[]> => {
-  const rows = await yahooFinance.historical(ticker, {
-    period1: startDate,
-    period2: endDate,
-    interval: '1d',
-  })
+  let rows: Array<{ date?: Date; close?: number | null }> = []
+  for (let dayOffset = 0; dayOffset <= 3; dayOffset += 1) {
+    const queryEndDate = new Date(endDate)
+    queryEndDate.setDate(queryEndDate.getDate() - dayOffset)
+    try {
+      rows = await yahooFinance.historical(ticker, {
+        period1: startDate,
+        period2: queryEndDate,
+        interval: '1d',
+      })
+      break
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isNullValuesError = message.includes('SOME (but not all) null values')
+      if (!isNullValuesError || dayOffset === 3) {
+        throw error
+      }
+    }
+  }
   if (!rows || rows.length === 0) {
     return []
   }
   return rows
-    .filter((row) => row.date && typeof row.close === 'number')
-    .map((row) => ({
+    .filter((row: { date?: Date; close?: number | null }) => row.date && typeof row.close === 'number')
+    .map((row: { date?: Date; close?: number | null }) => ({
       close: row.close as number,
       date: row.date as Date,
     }))
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .sort((a: HistoricalPoint, b: HistoricalPoint) => a.date.getTime() - b.date.getTime())
 }
 
 const computeReturn = (series: HistoricalPoint[], startDate: Date): number => {

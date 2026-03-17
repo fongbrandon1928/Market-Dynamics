@@ -20,6 +20,51 @@ type HistoricalPoint = {
   close: number | null
 }
 
+type LatestQuote = {
+  price: number
+  date: Date
+} | null
+
+const fetchHistoricalWithFallback = async (ticker: string, startDate: Date, endDate: Date) => {
+  for (let dayOffset = 0; dayOffset <= 3; dayOffset += 1) {
+    const queryEndDate = new Date(endDate)
+    queryEndDate.setDate(queryEndDate.getDate() - dayOffset)
+    try {
+      return await yahooFinance.historical(ticker, {
+        period1: startDate,
+        period2: queryEndDate,
+        interval: '1d',
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isNullValuesError = message.includes('SOME (but not all) null values')
+      if (!isNullValuesError || dayOffset === 3) {
+        throw error
+      }
+    }
+  }
+  return []
+}
+
+const fetchLatestQuote = async (ticker: string): Promise<LatestQuote> => {
+  try {
+    const quote = await yahooFinance.quote(ticker)
+    const latestPrice = [quote.regularMarketPrice, quote.postMarketPrice, quote.preMarketPrice]
+      .find((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    if (latestPrice === undefined) {
+      return null
+    }
+    const latestTime = [quote.regularMarketTime, quote.postMarketTime, quote.preMarketTime]
+      .find((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    return {
+      price: latestPrice,
+      date: latestTime ? new Date(latestTime * 1000) : new Date(),
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -37,11 +82,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const startDate = new Date()
     startDate.setDate(endDate.getDate() - PERIOD_DAYS[period])
 
-    const rows = await yahooFinance.historical(ticker, {
-      period1: startDate,
-      period2: endDate,
-      interval: '1d',
-    })
+    const rows = await fetchHistoricalWithFallback(ticker, startDate, endDate)
 
     if (!rows || rows.length < 2) {
       return NextResponse.json({ error: 'Not enough data to calculate return' }, { status: 400 })
@@ -61,18 +102,21 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const last = points[points.length - 1]
     const first = period === '1D' ? points[points.length - 2] : points[0]
+    const latestQuote = await fetchLatestQuote(ticker)
+    const latestPrice = latestQuote?.price ?? (last.close as number)
+    const latestDate = latestQuote?.date ?? last.date
 
-    if (!last.close || !first.close) {
+    if (!latestPrice || !first.close) {
       return NextResponse.json({ error: 'Invalid price data' }, { status: 400 })
     }
 
-    const dailyReturn = last.close / first.close - 1
+    const dailyReturn = latestPrice / first.close - 1
 
     return NextResponse.json({
       ticker,
-      date: formatDate(last.date),
+      date: formatDate(latestDate),
       period,
-      price: last.close,
+      price: latestPrice,
       dailyReturn,
     })
   } catch (error) {

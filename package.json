@@ -15,7 +15,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.10.0",
-    "yahoo-finance2": "^3.13.0"
+    "yahoo-finance2": "^3.13.2"
   },
   "engines": {
     "node": "24.13.0"
