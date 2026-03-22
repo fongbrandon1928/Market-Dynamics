@@ -105,18 +105,18 @@ export default function RotationIndicatorsLab() {
         </div>
       ) : null}
       {data ? (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(300px, 0.85fr) minmax(560px, 1.15fr)', gap: '12px', alignItems: 'start' }}>
-          {(() => {
-            const movingAverages = data.movingAverages || {
-              leadersBySpread: [],
-              laggardsBySpread: [],
-              bullishCrossovers: [],
-              bearishCrossovers: [],
-            }
-            const fullRankList = data.rankChanges?.fullRankList || []
-            return (
-              <>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: isMobile ? '1 / -1' : '1 / 2' }}>
+        (() => {
+          const movingAverages = data.movingAverages || {
+            leadersBySpread: [],
+            laggardsBySpread: [],
+            bullishCrossovers: [],
+            bearishCrossovers: [],
+          }
+          const fullRankList = data.rankChanges?.fullRankList || []
+          const cardStyle = { border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' } as const
+          const stackStyle = { display: 'flex', flexDirection: 'column' as const, gap: '12px' }
+          const section1 = (
+            <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>1) Relative Performance Trend</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: 1W return = (latest close / close 5 trading days ago) - 1. Leaders are highest 1W returns; laggards are lowest.
@@ -125,8 +125,10 @@ export default function RotationIndicatorsLab() {
             {data.trend.leaders.map((row) => <div key={`lead-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.r1w)}</div>)}
             <div style={{ fontSize: '12px', marginTop: '8px', marginBottom: '4px' }}>Laggards (1W)</div>
             {data.trend.laggards.map((row) => <div key={`lag-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.r1w)}</div>)}
-          </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: isMobile ? '1 / -1' : '2 / 3', gridRow: isMobile ? 'auto' : '1 / span 2' }}>
+            </div>
+          )
+          const section2 = (
+          <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>2) Rank Change / Leadership Shift</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: rank by {data.benchmark}-relative returns (RS) where RS = ticker return - {data.benchmark} return. Current rank uses RS(1W), previous rank uses RS(1M), and shift = previousRank - currentRank.
@@ -190,7 +192,9 @@ export default function RotationIndicatorsLab() {
               </div>
             </div>
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: isMobile ? '1 / -1' : '1 / 2' }}>
+          )
+          const section3 = (
+          <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>3) Offense vs Defensive + Relative Strength</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: offense/defensive returns are group averages. Spread = offense average - defensive average. Relative strength = sector return - {data.benchmark} return for the same window.
@@ -203,7 +207,9 @@ export default function RotationIndicatorsLab() {
             <div style={{ fontSize: '12px', marginTop: '8px' }}>Top RS (1M vs {data.benchmark})</div>
             {data.relativeStrength.slice(0, 5).map((row) => <div key={`rs-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.rs1m)}</div>)}
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: isMobile ? '1 / -1' : '1 / 2' }}>
+          )
+          const section4 = (
+          <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>4) Momentum + Dispersion</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: acceleration = 1W return - 1M return (positive means momentum is improving). Dispersion = top 1W return - bottom 1W return.
@@ -212,7 +218,9 @@ export default function RotationIndicatorsLab() {
             <div style={{ fontSize: '12px', marginTop: '8px' }}>Strongest acceleration</div>
             {data.momentum.strongestAcceleration.map((row) => <div key={`momup-${row.ticker}`} style={{ fontSize: '12px' }}>{row.ticker}: {pct(row.accel)}</div>)}
           </div>
-          <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', gridColumn: isMobile ? '1 / -1' : '2 / 3' }}>
+          )
+          const section5 = (
+          <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>5) Moving Averages (20D vs 3M)</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: 20D MA = average close of last 20 sessions; 3M MA = average close of last 63 sessions. Spread = (20D MA / 3M MA) - 1.
@@ -237,17 +245,50 @@ export default function RotationIndicatorsLab() {
               Bearish crossovers: {movingAverages.bearishCrossovers.length ? movingAverages.bearishCrossovers.join(', ') : 'None'}
             </div>
           </div>
-          <div style={{ gridColumn: '1 / -1', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+          )
+          const discoverySection = (
+          <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>Automated Sector Rotation Discovery</div>
             <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
               How calculated: heuristic triggers fire when relationships imply early rotation (e.g., IWM &gt; QQQ on 1W while IWM &lt; QQQ on 1Q, or offensive/defensive rank-shift transitions).
             </div>
             {data.rotationSignals.map((signal, idx) => <div key={`signal-${idx}`} style={{ fontSize: '12px' }}>- {signal}</div>)}
           </div>
-              </>
-            )
-          })()}
-        </div>
+          )
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {isMobile ? (
+                <>
+                  {section1}
+                  {section2}
+                  {section3}
+                  {section4}
+                  {section5}
+                </>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(300px, 0.85fr) minmax(560px, 1.15fr)',
+                    gap: '12px',
+                    alignItems: 'start',
+                  }}
+                >
+                  <div style={stackStyle}>
+                    {section1}
+                    {section3}
+                    {section4}
+                  </div>
+                  <div style={stackStyle}>
+                    {section2}
+                    {section5}
+                  </div>
+                </div>
+              )}
+              {discoverySection}
+            </div>
+          )
+        })()
       ) : null}
     </div>
   )
