@@ -14,13 +14,18 @@ type SummaryResponse = {
   asOf: string
   normalizationTicker?: string | null
   source?: 'live'
-  compareAsOfDate?: string | null
   analysis?: {
-    summary: string[]
+    marketSummaryByPeriod?: Array<{
+      period: '1M' | '1Q' | '6M' | '1Y'
+      leaders: Array<{ ticker: string; value: number }>
+      laggards: Array<{ ticker: string; value: number }>
+      benchmarkPct: number | null
+    }>
+    trendFlagsCount?: number
+    rotationSignalsCount?: number
     trendFlags: Array<{ ticker: string; signal: string; details: string }>
     rotationSignals: string[]
   }
-  comparison?: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }>
 }
 
 const formatReturn = (value: number): string => {
@@ -96,7 +101,6 @@ export default function PerformanceSummarySection({
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10))
-  const [compareDate, setCompareDate] = useState<string>('')
   const [isMobile, setIsMobile] = useState<boolean>(false)
   const [isNarrowPhone, setIsNarrowPhone] = useState<boolean>(false)
 
@@ -115,9 +119,6 @@ export default function PerformanceSummarySection({
         viewMode,
         asOfDate: selectedDate,
       })
-      if (compareDate) {
-        params.set('compareAsOfDate', compareDate)
-      }
       if (normalizationTicker) {
         params.set('normalizationTicker', normalizationTicker)
       }
@@ -135,16 +136,10 @@ export default function PerformanceSummarySection({
   }
 
   useEffect(() => {
-    if (compareDate && compareDate === selectedDate) {
-      setCompareDate('')
-    }
-  }, [compareDate, selectedDate])
-
-  useEffect(() => {
     fetchSummary()
     const intervalId = window.setInterval(fetchSummary, 24 * 60 * 60 * 1000)
     return () => window.clearInterval(intervalId)
-  }, [allTickers.join(','), viewMode, normalizationTicker, selectedDate, compareDate])
+  }, [allTickers.join(','), viewMode, normalizationTicker, selectedDate])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1024px)')
@@ -221,16 +216,9 @@ export default function PerformanceSummarySection({
                 {periods.map((period) => {
                   const value = row?.returns?.[period]
                   const color = value !== undefined ? (value >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
-                  const delta = summary?.comparison?.[ticker]?.periods?.[period]
-                  const deltaColor = delta !== undefined ? (delta >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
                   return (
                     <div key={`${ticker}-${period}`} style={{ color }}>
                       {value !== undefined ? formatReturn(value) : '—'}
-                      {delta !== undefined ? (
-                        <div style={{ fontSize: '10px', color: deltaColor }}>
-                          Δ {formatReturn(delta)}
-                        </div>
-                      ) : null}
                     </div>
                   )
                 })}
@@ -255,7 +243,7 @@ export default function PerformanceSummarySection({
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Performance Summary</h2>
           <div style={{ fontSize: '12px', color: '#6B7280' }}>
-            Auto-refreshes daily while open. Summarizes 1W/1M/1Q returns.
+            Auto-refreshes daily while open. Summarizes 1W/1M/1Q/6M/1Y returns.
             {summary?.asOf ? ` As of ${summary.asOf}.` : ''}
           </div>
         </div>
@@ -286,18 +274,6 @@ export default function PerformanceSummarySection({
             <option value="absolute">Pure Cumulative Return</option>
             <option value="relative">Normalized vs Benchmark</option>
           </select>
-          <input
-            type="date"
-            value={compareDate}
-            onChange={(e) => setCompareDate(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              border: '1px solid #ccc',
-              borderRadius: '8px',
-              fontSize: '12px',
-              backgroundColor: 'white',
-            }}
-          />
           <button
             onClick={fetchSummary}
             disabled={loading}
@@ -324,11 +300,107 @@ export default function PerformanceSummarySection({
       )}
       {summary?.analysis && (
         <div style={{ marginBottom: '12px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-          <div style={{ fontWeight: 600, marginBottom: '6px' }}>Automated Market Summary</div>
-          <div style={{ fontSize: '12px', color: '#111827' }}>
-            {summary.analysis.summary.map((line, index) => (
-              <div key={`summary-${index}`}>- {line}</div>
-            ))}
+          <div style={{ fontWeight: 600, marginBottom: '10px' }}>Market Summary</div>
+          {summary.analysis.marketSummaryByPeriod && summary.analysis.marketSummaryByPeriod.length > 0 ? (
+            <>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: isNarrowPhone ? '1fr' : 'repeat(4, minmax(0, 1fr))',
+                  gap: '12px',
+                  marginBottom: '10px',
+                }}
+              >
+                {summary.analysis.marketSummaryByPeriod.map((col) => {
+                  const periodLabel =
+                    col.period === '1M'
+                      ? '1 month'
+                      : col.period === '1Q'
+                        ? '1 quarter'
+                        : col.period === '6M'
+                          ? '6 months'
+                          : '1 year'
+                  return (
+                    <div
+                      key={col.period}
+                      style={{
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '6px',
+                        padding: '10px',
+                        backgroundColor: '#FAFAFA',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '8px', color: '#111827' }}>
+                        {periodLabel}
+                        <span style={{ fontWeight: 600, color: '#6B7280', marginLeft: '6px' }}>({col.period})</span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '10px',
+                          alignItems: 'flex-start',
+                          marginBottom: '8px',
+                          fontSize: '11px',
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Top leaders</div>
+                          {col.leaders.length === 0 ? (
+                            <div style={{ color: '#6B7280' }}>—</div>
+                          ) : (
+                            col.leaders.map((item) => (
+                              <div key={item.ticker} style={{ fontSize: '11px', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>{item.ticker}</span>{' '}
+                                <span style={{ color: item.value >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                                  {formatReturn(item.value)}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            borderLeft: '1px solid #E5E7EB',
+                            paddingLeft: '10px',
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Bottom laggards</div>
+                          {col.laggards.length === 0 ? (
+                            <div style={{ color: '#6B7280' }}>—</div>
+                          ) : (
+                            col.laggards.map((item) => (
+                              <div key={item.ticker} style={{ fontSize: '11px', lineHeight: 1.45 }}>
+                                <span style={{ fontWeight: 600 }}>{item.ticker}</span>{' '}
+                                <span style={{ color: item.value >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                                  {formatReturn(item.value)}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#374151' }}>
+                        <span style={{ fontWeight: 600 }}>{trendBenchmark} baseline: </span>
+                        {col.benchmarkPct !== null ? (
+                          <span style={{ color: col.benchmarkPct >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                            {formatReturn(col.benchmarkPct)}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#6B7280' }}>—</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : null}
+          <div style={{ fontSize: '12px', color: '#111827', marginBottom: '8px' }}>
+            Trend flags raised: {summary.analysis.trendFlagsCount ?? summary.analysis.trendFlags?.length ?? 0}. Rotation signals:{' '}
+            {summary.analysis.rotationSignalsCount ?? summary.analysis.rotationSignals?.length ?? 0}.
           </div>
           <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             Trend Flags

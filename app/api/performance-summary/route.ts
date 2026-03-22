@@ -8,6 +8,8 @@ const PERIOD_DAYS: Record<string, number> = {
   '1W': 8,
   '1M': 32,
   '1Q': 93,
+  '6M': 186,
+  '1Y': 372,
 }
 
 const formatDate = (date: Date): string => date.toISOString().slice(0, 10)
@@ -18,8 +20,17 @@ type HistoricalPoint = {
 }
 
 type SummaryData = Record<string, { returns: Record<string, number>; lastDate: string }>
+type MarketSummaryPeriodColumn = {
+  period: '1M' | '1Q' | '6M' | '1Y'
+  leaders: Array<{ ticker: string; value: number }>
+  laggards: Array<{ ticker: string; value: number }>
+  benchmarkPct: number | null
+}
+
 type AnalysisResult = {
-  summary: string[]
+  marketSummaryByPeriod: MarketSummaryPeriodColumn[]
+  trendFlagsCount: number
+  rotationSignalsCount: number
   trendFlags: Array<{ ticker: string; signal: string; details: string }>
   rotationSignals: string[]
 }
@@ -96,15 +107,21 @@ const buildAutomatedAnalysis = (
   const fmtPp = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}pp`
   const periods = ['1W', '1M', '1Q']
   const tickers = Object.keys(data)
-  const q1Sorted = tickers
-    .map((ticker) => ({ ticker, value: data[ticker]?.returns?.['1Q'] }))
-    .filter((item): item is { ticker: string; value: number } => typeof item.value === 'number')
-    .sort((a, b) => b.value - a.value)
-  const top3 = q1Sorted.slice(0, 3)
-  const bottom3 = q1Sorted.slice(-3).reverse()
-
   const baselineTicker = benchmarkTicker.toUpperCase()
   const baselineReturns = benchmarkReturns || data[baselineTicker]?.returns
+  const summaryPeriods = ['1M', '1Q', '6M', '1Y'] as const
+  const marketSummaryByPeriod: MarketSummaryPeriodColumn[] = summaryPeriods.map((period) => {
+    const sorted = tickers
+      .map((ticker) => ({ ticker, value: data[ticker]?.returns?.[period] }))
+      .filter((item): item is { ticker: string; value: number } => typeof item.value === 'number')
+      .sort((a, b) => b.value - a.value)
+    const leaders = sorted.slice(0, 3)
+    const laggards = sorted.slice(-3).reverse()
+    const benchmarkPct =
+      baselineReturns && typeof baselineReturns[period] === 'number' ? baselineReturns[period] : null
+    return { period, leaders, laggards, benchmarkPct }
+  })
+
   const trendFlags: Array<{ ticker: string; signal: string; details: string }> = []
   const isRelativeMode = viewMode === 'relative'
 
@@ -194,53 +211,13 @@ const buildAutomatedAnalysis = (
     rotationSignals.push('No strong early sector-rotation trigger detected from current 1W/1M/1Q relationships.')
   }
 
-  const summary: string[] = []
-  if (top3.length > 0) {
-    summary.push(`Top 1Q leaders: ${top3.map((item) => `${item.ticker} ${item.value >= 0 ? '+' : ''}${(item.value * 100).toFixed(2)}%`).join(', ')}.`)
-  }
-  if (bottom3.length > 0) {
-    summary.push(`Bottom 1Q laggards: ${bottom3.map((item) => `${item.ticker} ${item.value >= 0 ? '+' : ''}${(item.value * 100).toFixed(2)}%`).join(', ')}.`)
-  }
-  if (baselineReturns && typeof baselineReturns['1Q'] === 'number') {
-    summary.push(`${baselineTicker} baseline: ${baselineReturns['1Q'] >= 0 ? '+' : ''}${(baselineReturns['1Q'] * 100).toFixed(2)}% on 1Q.`)
-  }
-  summary.push(`Trend flags raised: ${trendFlags.length}. Rotation signals: ${rotationSignals.length}.`)
-
   return {
-    summary,
+    marketSummaryByPeriod,
+    trendFlagsCount: trendFlags.length,
+    rotationSignalsCount: rotationSignals.length,
     trendFlags: trendFlags.slice(0, 12),
     rotationSignals,
   }
-}
-
-const buildComparison = (
-  currentData: SummaryData,
-  compareData: SummaryData,
-  periods: string[],
-  baseDate: string,
-  compareDate: string
-) => {
-  const comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
-  Object.keys(currentData).forEach((ticker) => {
-    const current = currentData[ticker]?.returns || {}
-    const baseline = compareData[ticker]?.returns || {}
-    const deltas: Record<string, number> = {}
-    periods.forEach((period) => {
-      const currentValue = current[period]
-      const baselineValue = baseline[period]
-      if (typeof currentValue === 'number' && typeof baselineValue === 'number') {
-        deltas[period] = currentValue - baselineValue
-      }
-    })
-    if (Object.keys(deltas).length > 0) {
-      comparison[ticker] = {
-        periods: deltas,
-        baseScanDate: baseDate,
-        compareScanDate: compareDate,
-      }
-    }
-  })
-  return comparison
 }
 
 const buildSummaryAtDate = async (
@@ -348,7 +325,6 @@ export async function GET(request: NextRequest): Promise<Response> {
     const normalizationTickerRaw = searchParams.get('normalizationTicker')
     const normalizationTicker = normalizationTickerRaw ? normalizationTickerRaw.trim().toUpperCase() : null
     const asOfDateParam = searchParams.get('asOfDate')
-    const compareAsOfDateParam = searchParams.get('compareAsOfDate')
     const tickers = tickersParam
       ? tickersParam.split(',').map((ticker) => ticker.trim()).filter(Boolean)
       : []
@@ -364,25 +340,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     if (asOfDateParam && !parseDateParam(asOfDateParam)) {
       return NextResponse.json({ error: 'Invalid asOfDate format. Use YYYY-MM-DD.' }, { status: 400 })
     }
-    const compareAsOfDate = parseDateParam(compareAsOfDateParam)
-    if (compareAsOfDateParam && !compareAsOfDate) {
-      return NextResponse.json({ error: 'Invalid compareAsOfDate format. Use YYYY-MM-DD.' }, { status: 400 })
-    }
 
     const summary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, asOfDate)
     const analysisBenchmarkTicker = normalizationTicker || 'SPY'
     const analysis = buildAutomatedAnalysis(summary.data, viewMode, analysisBenchmarkTicker, summary.benchmarkReturns)
-    let comparison: Record<string, { periods: Record<string, number>; baseScanDate: string; compareScanDate: string }> = {}
-    if (compareAsOfDate) {
-      const compareSummary = await buildSummaryAtDate(tickers, viewMode, normalizationTicker, compareAsOfDate)
-      comparison = buildComparison(
-        summary.data,
-        compareSummary.data,
-        summary.periods,
-        formatDate(asOfDate),
-        formatDate(compareAsOfDate)
-      )
-    }
 
     return NextResponse.json({
       tickers: summary.data,
@@ -393,8 +354,6 @@ export async function GET(request: NextRequest): Promise<Response> {
       errors: summary.failures,
       source: 'live',
       analysis,
-      comparison,
-      compareAsOfDate: compareAsOfDate ? formatDate(compareAsOfDate) : null,
     })
   } catch (error) {
     console.error('Performance summary error:', error)
