@@ -298,7 +298,15 @@ export default function MarketDynamics() {
 
   return (
     <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px', fontSize: isMobile ? '26px' : '32px', fontWeight: 'bold' }}>
+      <h1
+        style={{
+          textAlign: 'center',
+          marginBottom: '20px',
+          fontSize: isMobile ? '26px' : '32px',
+          fontWeight: 'bold',
+          color: 'var(--md-text)',
+        }}
+      >
         Market Dynamics
       </h1>
 
@@ -331,13 +339,16 @@ export default function MarketDynamics() {
 
       {/* Error Message */}
       {error && (
-        <div style={{
-          padding: '10px',
-          backgroundColor: '#FEE2E2',
-          color: '#DC2626',
-          borderRadius: '4px',
-          marginBottom: '20px',
-        }}>
+        <div
+          style={{
+            padding: '10px',
+            backgroundColor: 'var(--md-error-bg)',
+            color: 'var(--md-negative)',
+            borderRadius: '4px',
+            marginBottom: '20px',
+            border: '1px solid var(--md-neg-muted-border)',
+          }}
+        >
           {error}
         </div>
       )}

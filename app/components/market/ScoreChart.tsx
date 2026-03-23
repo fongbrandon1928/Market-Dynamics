@@ -1,4 +1,17 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Brush, ReferenceLine } from 'recharts'
+'use client'
+
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Brush,
+  ReferenceLine,
+} from 'recharts'
 
 type ChartDataPoint = {
   date: string
@@ -14,30 +27,34 @@ type ScoreChartProps = {
   loading: boolean
 }
 
-// Custom tooltip component
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div style={{
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        padding: '10px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-      }}>
-        <p style={{ marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-          Date: {label}
-        </p>
+      <div
+        style={{
+          backgroundColor: 'var(--md-surface)',
+          border: '1px solid var(--md-border-strong)',
+          borderRadius: '4px',
+          padding: '10px',
+          boxShadow: 'var(--md-shadow-tooltip)',
+          color: 'var(--md-text)',
+        }}
+      >
+        <p style={{ marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>Date: {label}</p>
         {payload.map((entry: any, index: number) => {
           const value = typeof entry.value === 'number' ? entry.value : parseFloat(entry.value) || 0
           const price = entry?.payload?.prices?.[entry.name]
           return (
-            <p key={index} style={{
-              margin: '4px 0',
-              color: entry.color,
-              fontSize: '13px',
-            }}>
-              {entry.name}: {value >= 0 ? '+' : ''}{(value * 100).toFixed(2)}%
+            <p
+              key={index}
+              style={{
+                margin: '4px 0',
+                color: entry.color,
+                fontSize: '13px',
+              }}
+            >
+              {entry.name}: {value >= 0 ? '+' : ''}
+              {(value * 100).toFixed(2)}%
               {typeof price === 'number' && price !== 0 ? ` ($${price.toFixed(2)})` : ''}
             </p>
           )
@@ -48,6 +65,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null
 }
 
+const tickStyle = { fontSize: 12, fill: 'var(--md-chart-axis)' }
+
 export default function ScoreChart({
   chartData,
   viewMode,
@@ -56,26 +75,40 @@ export default function ScoreChart({
   loading,
 }: ScoreChartProps) {
   return (
-    <div style={{
-      backgroundColor: '#F0FFF0',
-      border: '2px solid #90EE90',
-      borderRadius: '8px',
-      padding: '20px',
-      minHeight: '500px',
-      position: 'relative',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+    <div
+      style={{
+        backgroundColor: 'var(--md-chart-surface)',
+        border: '2px solid var(--md-chart-border)',
+        borderRadius: '8px',
+        padding: '20px',
+        minHeight: '500px',
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+          marginBottom: '20px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0 }}>Cumulative Return Chart</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: '600', margin: 0, color: 'var(--md-text)' }}>
+            Cumulative Return Chart
+          </h2>
           <select
             value={viewMode}
             onChange={(e) => onViewModeChange(e.target.value)}
             style={{
               padding: '6px 10px',
-              border: '1px solid #ccc',
+              border: '1px solid var(--md-border-strong)',
               borderRadius: '8px',
               fontSize: '12px',
-              backgroundColor: 'white',
+              backgroundColor: 'var(--md-input-bg)',
+              color: 'var(--md-text)',
             }}
           >
             <option value="absolute">Pure Cumulative Return</option>
@@ -87,8 +120,8 @@ export default function ScoreChart({
           disabled={chartData.length === 0}
           style={{
             padding: '8px 16px',
-            backgroundColor: '#1E3A8A',
-            color: 'white',
+            backgroundColor: 'var(--md-primary)',
+            color: 'var(--md-on-primary)',
             border: 'none',
             borderRadius: '20px',
             fontSize: '14px',
@@ -105,31 +138,41 @@ export default function ScoreChart({
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
           <AreaChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--md-chart-grid)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 12 }}
+              tick={tickStyle}
+              stroke="var(--md-chart-grid)"
               angle={-45}
               textAnchor="end"
               height={80}
             />
-            <YAxis tick={{ fontSize: 12 }} />
-            <ReferenceLine y={0} stroke="#111827" strokeWidth={2} />
+            <YAxis tick={tickStyle} stroke="var(--md-chart-grid)" />
+            <ReferenceLine y={0} stroke="var(--md-chart-zero)" strokeWidth={2} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Brush dataKey="date" height={20} stroke="#1E3A8A" />
+            <Legend wrapperStyle={{ color: 'var(--md-text)' }} />
+            <Brush dataKey="date" height={20} stroke="var(--md-primary)" />
             {Object.keys(chartData[0] || {})
-              .filter(key => key !== 'date' && key !== 'prices')
+              .filter((key) => key !== 'date' && key !== 'prices')
               .map((ticker, index) => {
-                const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#ff00ff', '#00ffff', '#ffff00']
+                const seriesColors = [
+                  '#8884d8',
+                  '#82ca9d',
+                  '#ffc658',
+                  '#ff7300',
+                  '#22d3ee',
+                  '#e879f9',
+                  '#2dd4bf',
+                  '#fbbf24',
+                ]
                 return (
                   <Area
                     key={ticker}
                     type="monotone"
                     dataKey={ticker}
-                    stroke={colors[index % colors.length]}
+                    stroke={seriesColors[index % seriesColors.length]}
                     strokeWidth={1.5}
-                    fill={colors[index % colors.length]}
+                    fill={seriesColors[index % seriesColors.length]}
                     fillOpacity={0.12}
                     dot={false}
                     isAnimationActive={false}
@@ -139,14 +182,16 @@ export default function ScoreChart({
           </AreaChart>
         </ResponsiveContainer>
       ) : (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '400px',
-          color: '#666',
-          fontSize: '16px',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '400px',
+            color: 'var(--md-empty-text)',
+            fontSize: '16px',
+          }}
+        >
           {loading ? 'Loading chart data...' : 'Click Generate to create cumulative return chart'}
         </div>
       )}

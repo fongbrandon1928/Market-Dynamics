@@ -1,3 +1,5 @@
+'use client'
+
 type MarketSummarySectionProps = {
   marketSummary: string
   marketSummaryLoading: boolean
@@ -12,22 +14,24 @@ export default function MarketSummarySection({
   onGenerateSummary,
 }: MarketSummarySectionProps) {
   return (
-    <div style={{
-      marginTop: '20px',
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '16px',
-    }}>
+    <div
+      style={{
+        marginTop: '20px',
+        backgroundColor: 'var(--md-surface)',
+        border: '1px solid var(--md-border)',
+        borderRadius: '8px',
+        padding: '16px',
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Market Summary</h2>
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--md-text)' }}>Market Summary</h2>
         <button
           onClick={onGenerateSummary}
           disabled={marketSummaryLoading}
           style={{
             padding: '8px 14px',
-            backgroundColor: '#1E3A8A',
-            color: 'white',
+            backgroundColor: 'var(--md-primary)',
+            color: 'var(--md-on-primary)',
             border: 'none',
             borderRadius: '16px',
             fontSize: '13px',
@@ -40,19 +44,13 @@ export default function MarketSummarySection({
         </button>
       </div>
       {marketSummaryError && (
-        <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
-          {marketSummaryError}
-        </div>
+        <div style={{ color: 'var(--md-negative)', fontSize: '12px', marginBottom: '8px' }}>{marketSummaryError}</div>
       )}
       {marketSummary && (
-        <div style={{ whiteSpace: 'pre-line', fontSize: '14px', color: '#111827' }}>
-          {marketSummary}
-        </div>
+        <div style={{ whiteSpace: 'pre-line', fontSize: '14px', color: 'var(--md-text)' }}>{marketSummary}</div>
       )}
       {!marketSummary && !marketSummaryError && (
-        <div style={{ fontSize: '12px', color: '#6B7280' }}>
-          Uses Pollinations API with a server-side key.
-        </div>
+        <div style={{ fontSize: '12px', color: 'var(--md-text-muted)' }}>Uses Pollinations API with a server-side key.</div>
       )}
     </div>
   )

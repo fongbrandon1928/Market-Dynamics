@@ -2,6 +2,10 @@
 
 A Next.js application for analyzing market dynamics with cumulative return calculations and sector rotation analysis.
 
+## UI
+
+- **Dark mode**: use the **🌙 Dark** / **☀ Light** toggle next to the page tabs. Preference is saved in `localStorage` (`md-theme`). If unset, the OS `prefers-color-scheme` is used on first visit.
+
 ## Normalization Formula (Relative View)
 
 For each date `t`, we compute a price ratio versus the benchmark and rebase it to the start date:

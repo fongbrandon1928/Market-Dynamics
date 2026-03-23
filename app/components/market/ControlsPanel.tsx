@@ -1,3 +1,5 @@
+'use client'
+
 type ControlsPanelProps = {
   tickerList: string
   onTickerListChange: (value: string) => void
@@ -32,9 +34,21 @@ export default function ControlsPanel({
   loading,
 }: ControlsPanelProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#FFFFFF', padding: '12px', height: '100%', boxSizing: 'border-box' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        border: '1px solid var(--md-border)',
+        borderRadius: '8px',
+        backgroundColor: 'var(--md-surface)',
+        padding: '12px',
+        height: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
       <div>
-        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Ticker List</label>
+        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', color: 'var(--md-text)' }}>Ticker List</label>
         <textarea
           value={tickerList}
           onChange={(e) => onTickerListChange(e.target.value)}
@@ -44,18 +58,19 @@ export default function ControlsPanel({
             minHeight: '120px',
             resize: 'none',
             padding: '10px',
-            border: '2px solid #87CEEB',
+            border: '2px solid var(--md-accent-blue-border)',
             borderRadius: '4px',
-            backgroundColor: '#E0F6FF',
+            backgroundColor: 'var(--md-accent-blue-bg)',
             fontSize: '14px',
             fontFamily: 'monospace',
+            color: 'var(--md-text)',
           }}
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
         <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Start Date</label>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', color: 'var(--md-text)' }}>Start Date</label>
           <input
             type="date"
             value={startDate}
@@ -63,15 +78,15 @@ export default function ControlsPanel({
             style={{
               width: '100%',
               padding: '10px',
-              border: '2px solid #90EE90',
+              border: '2px solid var(--md-accent-green-border)',
               borderRadius: '4px',
-              backgroundColor: '#F0FFF0',
+              backgroundColor: 'var(--md-accent-green-bg)',
               fontSize: '14px',
             }}
           />
         </div>
         <div>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>End Date</label>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', color: 'var(--md-text)' }}>End Date</label>
           <input
             type="date"
             value={endDate}
@@ -79,9 +94,9 @@ export default function ControlsPanel({
             style={{
               width: '100%',
               padding: '10px',
-              border: '2px solid #90EE90',
+              border: '2px solid var(--md-accent-green-border)',
               borderRadius: '4px',
-              backgroundColor: '#F0FFF0',
+              backgroundColor: 'var(--md-accent-green-bg)',
               fontSize: '14px',
             }}
           />
@@ -89,7 +104,7 @@ export default function ControlsPanel({
       </div>
 
       <div>
-        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Normalization Ticker</label>
+        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', color: 'var(--md-text)' }}>Normalization Ticker</label>
         <input
           type="text"
           value={normalizationTicker}
@@ -98,27 +113,28 @@ export default function ControlsPanel({
           style={{
             width: '100%',
             padding: '10px',
-            border: '2px solid #87CEEB',
+            border: '2px solid var(--md-accent-blue-border)',
             borderRadius: '4px',
-            backgroundColor: '#E0F6FF',
+            backgroundColor: 'var(--md-accent-blue-bg)',
             fontSize: '14px',
           }}
         />
       </div>
 
       <div>
-        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Select ETF</label>
+        <label style={{ display: 'block', marginBottom: '5px', fontWeight: '500', color: 'var(--md-text)' }}>Select ETF</label>
         <select
           value={selectedETF}
           onChange={(e) => onETFChange(e.target.value)}
           style={{
             width: '100%',
             padding: '10px',
-            border: '2px solid #ccc',
+            border: '2px solid var(--md-border-strong)',
             borderRadius: '4px',
-            backgroundColor: 'white',
+            backgroundColor: 'var(--md-input-bg)',
             fontSize: '14px',
             appearance: 'none',
+            color: 'var(--md-text)',
             backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'right 10px center',
@@ -139,8 +155,8 @@ export default function ControlsPanel({
           disabled={loading}
           style={{
             padding: '12px 24px',
-            backgroundColor: '#1E3A8A',
-            color: 'white',
+            backgroundColor: 'var(--md-primary)',
+            color: 'var(--md-on-primary)',
             border: 'none',
             borderRadius: '20px',
             fontSize: '16px',
@@ -157,8 +173,8 @@ export default function ControlsPanel({
           onClick={onSectorRotation}
           style={{
             padding: '12px 24px',
-            backgroundColor: '#1E3A8A',
-            color: 'white',
+            backgroundColor: 'var(--md-primary)',
+            color: 'var(--md-on-primary)',
             border: 'none',
             borderRadius: '20px',
             fontSize: '16px',

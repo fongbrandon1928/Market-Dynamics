@@ -81,7 +81,7 @@ const renderTrendMetricsWithColor = (text: string): ReactNode[] => {
     if (/^[+-]\d+(?:\.\d+)?(?:%|pp)$/.test(part)) {
       const isPositive = part.startsWith('+')
       return (
-        <span key={`metric-${index}`} style={{ color: isPositive ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+        <span key={`metric-${index}`} style={{ color: isPositive ? 'var(--md-positive)' : 'var(--md-negative)', fontWeight: 600 }}>
           {part}
         </span>
       )
@@ -173,7 +173,7 @@ export default function PerformanceSummarySection({
   const renderTable = (title: string, tickers: string[]) => {
     if (tickers.length === 0) {
       return (
-        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+        <div style={{ fontSize: '12px', color: 'var(--md-text-muted)' }}>
           No tickers provided.
         </div>
       )
@@ -195,27 +195,27 @@ export default function PerformanceSummarySection({
       return bValue - aValue
     })
     return (
-      <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-        <div style={{ fontWeight: '600', marginBottom: '8px' }}>{title}</div>
+      <div style={{ border: '1px solid var(--md-border)', borderRadius: '6px', padding: '10px', backgroundColor: 'var(--md-surface-muted)' }}>
+        <div style={{ fontWeight: '600', marginBottom: '8px', color: 'var(--md-text)' }}>{title}</div>
         {viewMode === 'relative' && normalizationTicker ? (
-          <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '6px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '6px' }}>
             Benchmark: {normalizationTicker}
           </div>
         ) : null}
         <div style={{ overflowX: 'auto', maxWidth: '100%', paddingBottom: '2px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: `${isNarrowPhone ? 96 : 120}px repeat(${periods.length}, minmax(${isNarrowPhone ? 64 : 72}px, 1fr))`, gap: '6px', fontSize: '12px', minWidth: `${(isNarrowPhone ? 96 : 120) + periods.length * (isNarrowPhone ? 68 : 78)}px`, width: 'max-content' }}>
-          <div style={{ color: '#6B7280' }}>Ticker</div>
+          <div style={{ color: 'var(--md-text-muted)' }}>Ticker</div>
           {periods.map((period) => (
-            <div key={period} style={{ color: '#6B7280' }}>{period}</div>
+            <div key={period} style={{ color: 'var(--md-text-muted)' }}>{period}</div>
           ))}
           {sortedTickers.map((ticker) => {
             const row = summary?.tickers?.[ticker]
             return (
               <Fragment key={ticker}>
-                <div style={{ fontWeight: 600 }}>{ticker}</div>
+                <div style={{ fontWeight: 600, color: 'var(--md-text)' }}>{ticker}</div>
                 {periods.map((period) => {
                   const value = row?.returns?.[period]
-                  const color = value !== undefined ? (value >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
+                  const color = value !== undefined ? (value >= 0 ? 'var(--md-positive)' : 'var(--md-negative)') : 'var(--md-text-muted)'
                   return (
                     <div key={`${ticker}-${period}`} style={{ color }}>
                       {value !== undefined ? formatReturn(value) : '—'}
@@ -234,15 +234,15 @@ export default function PerformanceSummarySection({
   return (
     <div style={{
       marginTop: '20px',
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E5E7EB',
+      backgroundColor: 'var(--md-surface)',
+      border: '1px solid var(--md-border)',
       borderRadius: '8px',
       padding: '16px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Performance Summary</h2>
-          <div style={{ fontSize: '12px', color: '#6B7280' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--md-text)' }}>Performance Summary</h2>
+          <div style={{ fontSize: '12px', color: 'var(--md-text-muted)' }}>
             Auto-refreshes daily while open. Summarizes 1W/1M/1Q/6M/1Y returns.
             {summary?.asOf ? ` As of ${summary.asOf}.` : ''}
           </div>
@@ -254,10 +254,10 @@ export default function PerformanceSummarySection({
             onChange={(e) => setSelectedDate(e.target.value)}
             style={{
               padding: '6px 10px',
-              border: '1px solid #ccc',
+              border: '1px solid var(--md-border-strong)',
               borderRadius: '8px',
               fontSize: '12px',
-              backgroundColor: 'white',
+              backgroundColor: 'var(--md-input-bg)',
             }}
           />
           <select
@@ -265,10 +265,10 @@ export default function PerformanceSummarySection({
             onChange={(e) => onViewModeChange(e.target.value)}
             style={{
               padding: '6px 10px',
-              border: '1px solid #ccc',
+              border: '1px solid var(--md-border-strong)',
               borderRadius: '8px',
               fontSize: '12px',
-              backgroundColor: 'white',
+              backgroundColor: 'var(--md-input-bg)',
             }}
           >
             <option value="absolute">Pure Cumulative Return</option>
@@ -279,8 +279,8 @@ export default function PerformanceSummarySection({
             disabled={loading}
             style={{
               padding: '6px 12px',
-              backgroundColor: '#1E3A8A',
-              color: 'white',
+              backgroundColor: 'var(--md-primary)',
+              color: 'var(--md-on-primary)',
               border: 'none',
               borderRadius: '14px',
               fontSize: '12px',
@@ -294,12 +294,12 @@ export default function PerformanceSummarySection({
         </div>
       </div>
       {error && (
-        <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
+        <div style={{ color: 'var(--md-negative)', fontSize: '12px', marginBottom: '8px' }}>
           {error}
         </div>
       )}
       {summary?.analysis && (
-        <div style={{ marginBottom: '12px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
+        <div style={{ marginBottom: '12px', border: '1px solid var(--md-border)', borderRadius: '6px', padding: '10px' }}>
           <div style={{ fontWeight: 600, marginBottom: '10px' }}>Market Summary</div>
           {summary.analysis.marketSummaryByPeriod && summary.analysis.marketSummaryByPeriod.length > 0 ? (
             <>
@@ -324,16 +324,16 @@ export default function PerformanceSummarySection({
                     <div
                       key={col.period}
                       style={{
-                        border: '1px solid #E5E7EB',
+                        border: '1px solid var(--md-border)',
                         borderRadius: '6px',
                         padding: '10px',
-                        backgroundColor: '#FAFAFA',
+                        backgroundColor: 'var(--md-surface-card)',
                         minWidth: 0,
                       }}
                     >
-                      <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '8px', color: '#111827' }}>
+                      <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '8px', color: 'var(--md-text)' }}>
                         {periodLabel}
-                        <span style={{ fontWeight: 600, color: '#6B7280', marginLeft: '6px' }}>({col.period})</span>
+                        <span style={{ fontWeight: 600, color: 'var(--md-text-muted)', marginLeft: '6px' }}>({col.period})</span>
                       </div>
                       <div
                         style={{
@@ -345,14 +345,14 @@ export default function PerformanceSummarySection({
                         }}
                       >
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Top leaders</div>
+                          <div style={{ fontWeight: 600, color: 'var(--md-text-subtle)', marginBottom: '4px' }}>Top leaders</div>
                           {col.leaders.length === 0 ? (
-                            <div style={{ color: '#6B7280' }}>—</div>
+                            <div style={{ color: 'var(--md-text-muted)' }}>—</div>
                           ) : (
                             col.leaders.map((item) => (
                               <div key={item.ticker} style={{ fontSize: '11px', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>{item.ticker}</span>{' '}
-                                <span style={{ color: item.value >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                                <span style={{ color: item.value >= 0 ? 'var(--md-positive)' : 'var(--md-negative)', fontWeight: 600 }}>
                                   {formatReturn(item.value)}
                                 </span>
                               </div>
@@ -363,18 +363,18 @@ export default function PerformanceSummarySection({
                           style={{
                             flex: 1,
                             minWidth: 0,
-                            borderLeft: '1px solid #E5E7EB',
+                            borderLeft: '1px solid var(--md-border)',
                             paddingLeft: '10px',
                           }}
                         >
-                          <div style={{ fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Bottom laggards</div>
+                          <div style={{ fontWeight: 600, color: 'var(--md-text-subtle)', marginBottom: '4px' }}>Bottom laggards</div>
                           {col.laggards.length === 0 ? (
-                            <div style={{ color: '#6B7280' }}>—</div>
+                            <div style={{ color: 'var(--md-text-muted)' }}>—</div>
                           ) : (
                             col.laggards.map((item) => (
                               <div key={item.ticker} style={{ fontSize: '11px', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>{item.ticker}</span>{' '}
-                                <span style={{ color: item.value >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                                <span style={{ color: item.value >= 0 ? 'var(--md-positive)' : 'var(--md-negative)', fontWeight: 600 }}>
                                   {formatReturn(item.value)}
                                 </span>
                               </div>
@@ -382,14 +382,14 @@ export default function PerformanceSummarySection({
                           )}
                         </div>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#374151' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--md-text-subtle)' }}>
                         <span style={{ fontWeight: 600 }}>{trendBenchmark} baseline: </span>
                         {col.benchmarkPct !== null ? (
-                          <span style={{ color: col.benchmarkPct >= 0 ? '#16A34A' : '#DC2626', fontWeight: 600 }}>
+                          <span style={{ color: col.benchmarkPct >= 0 ? 'var(--md-positive)' : 'var(--md-negative)', fontWeight: 600 }}>
                             {formatReturn(col.benchmarkPct)}
                           </span>
                         ) : (
-                          <span style={{ color: '#6B7280' }}>—</span>
+                          <span style={{ color: 'var(--md-text-muted)' }}>—</span>
                         )}
                       </div>
                     </div>
@@ -398,7 +398,7 @@ export default function PerformanceSummarySection({
               </div>
             </>
           ) : null}
-          <div style={{ fontSize: '12px', color: '#111827', marginBottom: '8px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--md-text)', marginBottom: '8px' }}>
             Trend flags raised: {summary.analysis.trendFlagsCount ?? summary.analysis.trendFlags?.length ?? 0}. Rotation signals:{' '}
             {summary.analysis.rotationSignalsCount ?? summary.analysis.rotationSignals?.length ?? 0}.
           </div>
@@ -428,8 +428,8 @@ export default function PerformanceSummarySection({
                 width: '16px',
                 height: '16px',
                 borderRadius: '999px',
-                border: '1px solid #9CA3AF',
-                color: '#4B5563',
+                border: '1px solid var(--md-info-icon-border)',
+                color: 'var(--md-info-icon-fg)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -446,12 +446,12 @@ export default function PerformanceSummarySection({
             style={{
               marginTop: '6px',
               marginBottom: '8px',
-              border: '1px solid #D1D5DB',
+              border: '1px solid var(--md-border-strong)',
               borderRadius: '6px',
-              backgroundColor: '#F9FAFB',
+              backgroundColor: 'var(--md-surface-muted)',
               padding: '8px',
               fontSize: '11px',
-              color: '#374151',
+              color: 'var(--md-text-subtle)',
               lineHeight: 1.5,
             }}
           >
@@ -461,7 +461,7 @@ export default function PerformanceSummarySection({
             <div>- Short-term acceleration/fade (pp): <span style={{ fontFamily: 'monospace' }}>(1W - 1Q) x 100</span></div>
             <div>- Vs benchmark values show excess return vs selected normalization ticker.</div>
           </div>
-          <div style={{ fontSize: '12px', color: '#111827' }}>
+          <div style={{ fontSize: '12px', color: 'var(--md-text)' }}>
             {summary.analysis.trendFlags.length === 0 ? (
               <div>- No major trend flags detected.</div>
             ) : (
@@ -469,23 +469,35 @@ export default function PerformanceSummarySection({
                 {groupedTrendFlags.map((group) => {
                   const isPositive = group.signal.includes('Outperformance') || group.signal.includes('Improving')
                   const isNegative = group.signal.includes('Underperformance') || group.signal.includes('Deteriorating')
-                  const headerBg = isPositive ? '#DCFCE7' : isNegative ? '#FEE2E2' : '#E5E7EB'
-                  const headerColor = isPositive ? '#166534' : isNegative ? '#991B1B' : '#374151'
-                  const cardBorder = isPositive ? '#86EFAC' : isNegative ? '#FCA5A5' : '#D1D5DB'
+                  const headerBg = isPositive
+                    ? 'var(--md-pos-muted-bg)'
+                    : isNegative
+                      ? 'var(--md-neg-muted-bg)'
+                      : 'var(--md-surface-muted)'
+                  const headerColor = isPositive
+                    ? 'var(--md-pos-text-strong)'
+                    : isNegative
+                      ? 'var(--md-neg-text-strong)'
+                      : 'var(--md-text-subtle)'
+                  const cardBorder = isPositive
+                    ? 'var(--md-pos-muted-border)'
+                    : isNegative
+                      ? 'var(--md-neg-muted-border)'
+                      : 'var(--md-border-strong)'
                   return (
-                    <div key={group.signal} style={{ border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '8px', backgroundColor: '#FFFFFF' }}>
+                    <div key={group.signal} style={{ border: `1px solid ${cardBorder}`, borderRadius: '6px', padding: '8px', backgroundColor: 'var(--md-surface)' }}>
                       <div style={{ fontSize: '11px', fontWeight: 700, padding: '4px 8px', borderRadius: '999px', backgroundColor: headerBg, color: headerColor, display: 'inline-block', marginBottom: '8px' }}>
                         {group.signal}
                       </div>
                       {group.items.length === 0 ? (
-                        <div style={{ fontSize: '11px', color: '#6B7280' }}>No tickers</div>
+                        <div style={{ fontSize: '11px', color: 'var(--md-text-muted)' }}>No tickers</div>
                       ) : (
                         group.items.map((flag, index) => {
                           const stackedDetails = formatTrendFlagDetails(flag.details)
                           return (
                             <div key={`flag-${group.signal}-${flag.ticker}-${index}`} style={{ marginBottom: '8px' }}>
                               <div style={{ fontWeight: 700, fontSize: '12px' }}>{flag.ticker}</div>
-                              <div style={{ fontSize: '12px', color: '#374151' }}>
+                              <div style={{ fontSize: '12px', color: 'var(--md-text-subtle)' }}>
                                 {stackedDetails.split('\n').map((line, lineIndex) => (
                                   <div key={`line-${lineIndex}`} style={{ whiteSpace: 'pre-wrap' }}>
                                     {renderTrendMetricsWithColor(line)}
@@ -503,7 +515,7 @@ export default function PerformanceSummarySection({
             )}
           </div>
           <div style={{ marginTop: '8px', fontWeight: 600, fontSize: '12px' }}>Sector Rotation Discovery</div>
-          <div style={{ fontSize: '12px', color: '#111827' }}>
+          <div style={{ fontSize: '12px', color: 'var(--md-text)' }}>
             {summary.analysis.rotationSignals.map((signal, index) => (
               <div key={`rotation-${index}`}>- {signal}</div>
             ))}

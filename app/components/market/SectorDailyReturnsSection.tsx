@@ -1,3 +1,5 @@
+'use client'
+
 type SectorReturns = Record<string, { dailyReturn: number; date: string; price: number }>
 
 type SectorDailyReturnsSectionProps = {
@@ -24,32 +26,42 @@ export default function SectorDailyReturnsSection({
 }: SectorDailyReturnsSectionProps) {
   const headerDate = getFirstDate(sectorReturns)
   return (
-    <div style={{
-      marginTop: '20px',
-      backgroundColor: '#FFFFFF',
-      border: '1px solid #E5E7EB',
-      borderRadius: '8px',
-      padding: '16px',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600' }}>
+    <div
+      style={{
+        marginTop: '20px',
+        backgroundColor: 'var(--md-surface)',
+        border: '1px solid var(--md-border)',
+        borderRadius: '8px',
+        padding: '16px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '8px',
+          flexWrap: 'wrap',
+          marginBottom: '10px',
+        }}
+      >
+        <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--md-text)' }}>
           Sector Period Return{headerDate ? ` (${headerDate})` : ''}
         </h2>
-        {sectorLoading && (
-          <span style={{ fontSize: '12px', color: '#6B7280' }}>Loading...</span>
-        )}
+        {sectorLoading && <span style={{ fontSize: '12px', color: 'var(--md-text-muted)' }}>Loading...</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-        <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151' }}>Timeframe</label>
+        <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--md-text-subtle)' }}>Timeframe</label>
         <select
           value={sectorPeriod}
           onChange={(e) => onSectorPeriodChange(e.target.value)}
           style={{
             padding: '6px 10px',
-            border: '1px solid #ccc',
+            border: '1px solid var(--md-border-strong)',
             borderRadius: '8px',
             fontSize: '12px',
-            backgroundColor: 'white',
+            backgroundColor: 'var(--md-input-bg)',
+            color: 'var(--md-text)',
           }}
         >
           <option value="1D">1 Day</option>
@@ -62,19 +74,20 @@ export default function SectorDailyReturnsSection({
         </select>
       </div>
       {sectorError && (
-        <div style={{ color: '#DC2626', fontSize: '12px', marginBottom: '8px' }}>
-          {sectorError}
-        </div>
+        <div style={{ color: 'var(--md-negative)', fontSize: '12px', marginBottom: '8px' }}>{sectorError}</div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px' }}>
         {etfTickers.map((ticker) => {
           const data = sectorReturns[ticker]
-          const returnColor = data ? (data.dailyReturn >= 0 ? '#16A34A' : '#DC2626') : '#6B7280'
+          const returnColor = data ? (data.dailyReturn >= 0 ? 'var(--md-positive)' : 'var(--md-negative)') : 'var(--md-text-muted)'
           return (
-            <div key={ticker} style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px' }}>
-              <div style={{ fontWeight: '600', marginBottom: '4px' }}>{ticker}</div>
+            <div
+              key={ticker}
+              style={{ border: '1px solid var(--md-border)', borderRadius: '6px', padding: '10px', backgroundColor: 'var(--md-surface-muted)' }}
+            >
+              <div style={{ fontWeight: '600', marginBottom: '4px', color: 'var(--md-text)' }}>{ticker}</div>
               {data ? (
-                <div style={{ fontSize: '13px', color: '#111827' }}>
+                <div style={{ fontSize: '13px', color: 'var(--md-text)' }}>
                   {data.price.toFixed(2)}
                   <span style={{ marginLeft: '6px', color: returnColor }}>
                     {data.dailyReturn >= 0 ? '+' : ''}
@@ -82,7 +95,7 @@ export default function SectorDailyReturnsSection({
                   </span>
                 </div>
               ) : (
-                <div style={{ fontSize: '12px', color: '#6B7280' }}>No data</div>
+                <div style={{ fontSize: '12px', color: 'var(--md-text-muted)' }}>No data</div>
               )}
             </div>
           )

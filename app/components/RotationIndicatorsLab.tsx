@@ -45,9 +45,12 @@ const pct = (v: number) => `${v >= 0 ? '+' : ''}${(v * 100).toFixed(2)}%`
 const signed = (v: number) => `${v >= 0 ? '+' : ''}${v}`
 
 const shiftStyle = (shift: number) => ({
-  color: shift > 0 ? '#166534' : shift < 0 ? '#991B1B' : '#374151',
-  backgroundColor: shift > 0 ? '#DCFCE7' : shift < 0 ? '#FEE2E2' : '#F3F4F6',
-  border: `1px solid ${shift > 0 ? '#86EFAC' : shift < 0 ? '#FCA5A5' : '#D1D5DB'}`,
+  color: shift > 0 ? 'var(--md-pos-text-strong)' : shift < 0 ? 'var(--md-neg-text-strong)' : 'var(--md-text-subtle)',
+  backgroundColor:
+    shift > 0 ? 'var(--md-pos-muted-bg)' : shift < 0 ? 'var(--md-neg-muted-bg)' : 'var(--md-neutral-chip-bg)',
+  border: `1px solid ${
+    shift > 0 ? 'var(--md-pos-muted-border)' : shift < 0 ? 'var(--md-neg-muted-border)' : 'var(--md-border-strong)'
+  }`,
 })
 
 export default function RotationIndicatorsLab() {
@@ -87,20 +90,20 @@ export default function RotationIndicatorsLab() {
 
   return (
     <div style={{ padding: isMobile ? '12px' : '20px', maxWidth: '1400px', margin: '0 auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px', fontSize: isMobile ? '26px' : '32px', fontWeight: 'bold' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px', fontSize: isMobile ? '26px' : '32px', fontWeight: 'bold', color: 'var(--md-text)' }}>
         Sector Rotation Indicators (Test)
       </h1>
-      <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px', marginBottom: '12px', backgroundColor: '#FFFFFF', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 120px auto', gap: '8px' }}>
-        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={{ padding: '8px', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-        <input value={lookbackDays} onChange={(e) => setLookbackDays(e.target.value)} placeholder="Lookback days" style={{ padding: '8px', border: '1px solid #D1D5DB', borderRadius: '6px' }} />
-        <input value={benchmarkTicker} onChange={(e) => setBenchmarkTicker(e.target.value.toUpperCase())} placeholder="Benchmark" style={{ padding: '8px', border: '1px solid #D1D5DB', borderRadius: '6px', textTransform: 'uppercase' }} />
-        <button onClick={run} disabled={loading} style={{ padding: '8px 14px', border: 'none', borderRadius: '14px', backgroundColor: '#1E3A8A', color: '#FFFFFF', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+      <div style={{ border: '1px solid var(--md-border)', borderRadius: '8px', padding: '12px', marginBottom: '12px', backgroundColor: 'var(--md-surface)', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 120px auto', gap: '8px' }}>
+        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={{ padding: '8px', border: '1px solid var(--md-border-strong)', borderRadius: '6px' }} />
+        <input value={lookbackDays} onChange={(e) => setLookbackDays(e.target.value)} placeholder="Lookback days" style={{ padding: '8px', border: '1px solid var(--md-border-strong)', borderRadius: '6px' }} />
+        <input value={benchmarkTicker} onChange={(e) => setBenchmarkTicker(e.target.value.toUpperCase())} placeholder="Benchmark" style={{ padding: '8px', border: '1px solid var(--md-border-strong)', borderRadius: '6px', textTransform: 'uppercase' }} />
+        <button onClick={run} disabled={loading} style={{ padding: '8px 14px', border: 'none', borderRadius: '14px', backgroundColor: 'var(--md-primary)', color: 'var(--md-on-primary)', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
           {loading ? 'Running...' : 'Run Indicators'}
         </button>
       </div>
-      {error ? <div style={{ color: '#DC2626', marginBottom: '8px', fontSize: '13px' }}>{error}</div> : null}
+      {error ? <div style={{ color: 'var(--md-negative)', marginBottom: '8px', fontSize: '13px' }}>{error}</div> : null}
       {data?.warnings?.length ? (
-        <div style={{ border: '1px solid #F59E0B', backgroundColor: '#FFFBEB', color: '#92400E', borderRadius: '8px', padding: '10px', marginBottom: '12px', fontSize: '12px' }}>
+        <div style={{ border: '1px solid var(--md-warning-border)', backgroundColor: 'var(--md-warning-bg)', color: 'var(--md-warning-text)', borderRadius: '8px', padding: '10px', marginBottom: '12px', fontSize: '12px' }}>
           {data.warnings.map((w, idx) => <div key={`warn-${idx}`}>- {w}</div>)}
         </div>
       ) : null}
@@ -113,12 +116,18 @@ export default function RotationIndicatorsLab() {
             bearishCrossovers: [],
           }
           const fullRankList = data.rankChanges?.fullRankList || []
-          const cardStyle = { border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' } as const
+          const cardStyle = {
+            border: '1px solid var(--md-border)',
+            borderRadius: '8px',
+            padding: '12px',
+            backgroundColor: 'var(--md-surface)',
+            color: 'var(--md-text)',
+          } as const
           const stackStyle = { display: 'flex', flexDirection: 'column' as const, gap: '12px' }
           const section1 = (
             <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>1) Relative Performance Trend</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: 1W return = (latest close / close 5 trading days ago) - 1. Leaders are highest 1W returns; laggards are lowest.
             </div>
             <div style={{ fontSize: '12px', marginBottom: '4px' }}>Leaders (1W)</div>
@@ -130,21 +139,21 @@ export default function RotationIndicatorsLab() {
           const section2 = (
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>2) Rank Change / Leadership Shift</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: rank by {data.benchmark}-relative returns (RS) where RS = ticker return - {data.benchmark} return. Current rank uses RS(1W), previous rank uses RS(1M), and shift = previousRank - currentRank.
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               Interpretation: positive shift means leadership is strengthening (rank improved), negative shift means leadership is fading. Larger absolute values imply faster rotation pressure.
             </div>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-              <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '999px', backgroundColor: '#DCFCE7', color: '#166534', border: '1px solid #86EFAC' }}>Positive shift = improving leadership</span>
-              <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '999px', backgroundColor: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5' }}>Negative shift = weakening leadership</span>
+              <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '999px', backgroundColor: 'var(--md-pos-muted-bg)', color: 'var(--md-pos-text-strong)', border: '1px solid var(--md-pos-muted-border)' }}>Positive shift = improving leadership</span>
+              <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '999px', backgroundColor: 'var(--md-neg-muted-bg)', color: 'var(--md-neg-text-strong)', border: '1px solid var(--md-neg-muted-border)' }}>Negative shift = weakening leadership</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(260px, 0.85fr) minmax(420px, 1.15fr)', gap: '10px' }}>
               <div>
                 <div style={{ fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>Top Improvers</div>
                 {data.rankChanges.topImprovers.map((row) => (
-                  <div key={`impr-${row.ticker}`} style={{ fontSize: '11px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '5px 6px', marginBottom: '5px' }}>
+                  <div key={`impr-${row.ticker}`} style={{ fontSize: '11px', border: '1px solid var(--md-border)', borderRadius: '6px', padding: '5px 6px', marginBottom: '5px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontWeight: 700 }}>{row.ticker}</span>
                       <span style={{ ...shiftStyle(row.shift), borderRadius: '999px', padding: '1px 7px', fontWeight: 700 }}>{signed(row.shift)}</span>
@@ -156,7 +165,7 @@ export default function RotationIndicatorsLab() {
                 ))}
                 <div style={{ fontSize: '12px', marginTop: '8px', marginBottom: '4px', fontWeight: 600 }}>Top Decliners</div>
                 {data.rankChanges.topDecliners.map((row) => (
-                  <div key={`decl-${row.ticker}`} style={{ fontSize: '11px', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '5px 6px', marginBottom: '5px' }}>
+                  <div key={`decl-${row.ticker}`} style={{ fontSize: '11px', border: '1px solid var(--md-border)', borderRadius: '6px', padding: '5px 6px', marginBottom: '5px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontWeight: 700 }}>{row.ticker}</span>
                       <span style={{ ...shiftStyle(row.shift), borderRadius: '999px', padding: '1px 7px', fontWeight: 700 }}>{signed(row.shift)}</span>
@@ -169,8 +178,8 @@ export default function RotationIndicatorsLab() {
               </div>
               <div>
                 <div style={{ fontSize: '12px', marginBottom: '4px', fontWeight: 600 }}>Full Rank List</div>
-                <div style={{ border: '1px solid #E5E7EB', borderRadius: '6px', padding: '6px', overflowX: 'auto' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 52px 58px 1fr', gap: '6px', fontSize: '11px', color: '#6B7280', borderBottom: '1px solid #E5E7EB', paddingBottom: '4px', marginBottom: '4px', minWidth: '360px' }}>
+                <div style={{ border: '1px solid var(--md-border)', borderRadius: '6px', padding: '6px', overflowX: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 52px 58px 1fr', gap: '6px', fontSize: '11px', color: 'var(--md-text-muted)', borderBottom: '1px solid var(--md-border)', paddingBottom: '4px', marginBottom: '4px', minWidth: '360px' }}>
                     <span>Ticker</span>
                     <span>Now</span>
                     <span>Was</span>
@@ -178,7 +187,7 @@ export default function RotationIndicatorsLab() {
                     <span>RS(1W) / RS(1M)</span>
                   </div>
                   {fullRankList.map((row) => (
-                    <div key={`full-${row.ticker}`} style={{ fontSize: '12px', display: 'grid', gridTemplateColumns: '52px 48px 52px 58px 1fr', gap: '6px', alignItems: 'center', padding: '3px 0', borderBottom: '1px solid #F3F4F6', minWidth: '360px' }}>
+                    <div key={`full-${row.ticker}`} style={{ fontSize: '12px', display: 'grid', gridTemplateColumns: '52px 48px 52px 58px 1fr', gap: '6px', alignItems: 'center', padding: '3px 0', borderBottom: '1px solid var(--md-row-divider)', minWidth: '360px' }}>
                       <span style={{ fontWeight: 700 }}>{row.ticker}</span>
                       <span>#{row.currentRank}</span>
                       <span>#{row.previousRank}</span>
@@ -196,10 +205,10 @@ export default function RotationIndicatorsLab() {
           const section3 = (
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>3) Offense vs Defensive + Relative Strength</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: offense/defensive returns are group averages. Spread = offense average - defensive average. Relative strength = sector return - {data.benchmark} return for the same window.
             </div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               Definitions: offensive = XLK, XLY, XLI, XLF, SMH, IWM, QQQ; defensive = XLP, XLU, XLV.
             </div>
             <div style={{ fontSize: '12px' }}>Offense 1W: {pct(data.offenseDefense.offensive1w)} | Defensive 1W: {pct(data.offenseDefense.defensive1w)}</div>
@@ -211,7 +220,7 @@ export default function RotationIndicatorsLab() {
           const section4 = (
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>4) Momentum + Dispersion</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: acceleration = 1W return - 1M return (positive means momentum is improving). Dispersion = top 1W return - bottom 1W return.
             </div>
             <div style={{ fontSize: '12px' }}>1W dispersion spread: {pct(data.dispersion.oneWeekSpread)}</div>
@@ -222,7 +231,7 @@ export default function RotationIndicatorsLab() {
           const section5 = (
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>5) Moving Averages (20D vs 3M)</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: 20D MA = average close of last 20 sessions; 3M MA = average close of last 63 sessions. Spread = (20D MA / 3M MA) - 1.
               Crossovers compare yesterday and today MA relationships.
             </div>
@@ -249,7 +258,7 @@ export default function RotationIndicatorsLab() {
           const discoverySection = (
           <div style={cardStyle}>
             <div style={{ fontWeight: 700, marginBottom: '8px' }}>Automated Sector Rotation Discovery</div>
-            <div style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--md-text-muted)', marginBottom: '8px' }}>
               How calculated: heuristic triggers fire when relationships imply early rotation (e.g., IWM &gt; QQQ on 1W while IWM &lt; QQQ on 1Q, or offensive/defensive rank-shift transitions).
             </div>
             {data.rotationSignals.map((signal, idx) => <div key={`signal-${idx}`} style={{ fontSize: '12px' }}>- {signal}</div>)}
